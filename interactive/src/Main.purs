@@ -12,6 +12,7 @@ import Prelude
 import Data.Array as A
 import Data.Generic.Rep (class Generic)
 import Data.List (List(Nil), (:), concat, length, intercalate, foldl, reverse, filter, zip, range, singleton, index, take, drop, null)
+import Data.List.Lazy (Pattern)
 import Data.Map as M
 import Data.Show.Generic (genericShow)
 import Data.String.CodePoints (CodePoint)
@@ -170,9 +171,19 @@ toOriginal tree = go tree ""
 _tryrewriteTreeWithIndex :: Tree -> Array Int -> Str -> Tree
 _tryrewriteTreeWithIndex oldtree ixarr newbody = go (A.toUnfoldable ixarr) newbody oldtree
   where 
+    go (i:Nil) "" (Node ob or ps) = 
+      Node ob or (removeNthIf (\(Node _ _ p) -> null p) i ps)
+
     go Nil nb (Node _ _ ps) = 
       let sp = splitLineOnSharp nb
-      in  Node sp.body sp.rule ps
+          default = Node sp.body sp.rule ps
+      in  if null ps && Stc.contains (Pattern "\n") nb then
+            case parseFromStr nb of
+              Right (Closed t EOT Nil) -> t
+              Right _ -> default
+              Left  _ -> default
+          else
+            default
     
     go (i:is) nb (Node ob or ps) =
       Node ob or (modifyNth i (go is nb) ps)
@@ -206,6 +217,14 @@ _tryDelWithIndex oldtree ixarr forceDel = go (A.toUnfoldable ixarr) oldtree
     go (i:is) (Node ob or ps) =
       Node ob or (modifyNth i (go is) ps)
 
+_tryRuinWithIndex :: Tree -> Array Int -> Tree
+_tryRuinWithIndex oldtree ixarr = go (A.toUnfoldable ixarr) oldtree
+  where 
+    go Nil x = Node "" Nothing Nil
+    
+    go (i:is) (Node ob or ps) =
+      Node ob or (modifyNth i (go is) ps)
+
 _addChild :: Tree -> Tree
 _addChild oldtree = Node "" Nothing (singleton oldtree)
 
@@ -232,11 +251,18 @@ _countChildren tree ixarr = go (A.toUnfoldable ixarr) tree
     go Nil    (Node _ _ ps) = length ps
     go (i:is) (Node _ _ ps) = fromMaybe 0 (go is <$> index ps i)
 
-_getContentOfId :: Tree -> Array Int -> Str
-_getContentOfId tree ixarr = go (A.toUnfoldable ixarr) tree
+_getContentWithIndex :: Tree -> Array Int -> Str
+_getContentWithIndex tree ixarr = go (A.toUnfoldable ixarr) tree
   where 
     go Nil    (Node body rule ps) = unsplitLineOnSharp {body:body,rule:rule}
     go (i:is) (Node body rule ps) = fromMaybe "" (go is <$> index ps i)
+
+_subTreeToString :: Tree -> Array Int -> Str
+_subTreeToString oldtree ixarr = go (A.toUnfoldable ixarr) oldtree
+  where 
+    go Nil x = toOriginal x
+    
+    go (i:is) (Node ob or ps) = fromMaybe "" (go is <$> index ps i)
 
 strToMappedTree :: Str -> (Tree -> Tree) -> Str
 strToMappedTree str f = 
@@ -247,6 +273,7 @@ strToMappedTree str f =
 
 addChild                   s     = strToMappedTree s _addChild
 killEmptySubTrees          s     = strToMappedTree s _killEmptySubTrees
+tryRuinWithIndex           s i   = strToMappedTree s (\t -> _tryRuinWithIndex           t i)
 tryDelWithIndex            s i f = strToMappedTree s (\t -> _tryDelWithIndex            t i f)
 tryAddParentRightWithIndex s i   = strToMappedTree s (\t -> _tryAddParentRightWithIndex t i)
 tryAddParentLeftWithIndex  s i   = strToMappedTree s (\t -> _tryAddParentLeftWithIndex  t i)
@@ -271,9 +298,10 @@ strToConvertedA f str default =
     Right (Closed t EOT _) -> f t
     Right _                -> default
 
-isAxiom        s i = strToConvertedA (\t -> _isAxiom t i) s false
-countChildren  s i = strToConvertedA (\t -> _countChildren t i) s 0
-getContentOfId s i = strToConvertedA (\t -> _getContentOfId t i) s ""
+isAxiom             s i = strToConvertedA (\t -> _isAxiom             t i) s false
+countChildren       s i = strToConvertedA (\t -> _countChildren       t i) s 0
+getContentWithIndex s i = strToConvertedA (\t -> _getContentWithIndex t i) s ""
+subTreeToString     s i = strToConvertedA (\t -> _subTreeToString     t i) s ""
 
 
 modifyNth :: forall a. Int -> (a -> a) -> List a -> List a

@@ -265,6 +265,7 @@ var PS = {};
       };
   };
   var isNothing = maybe(true)(Data_Function["const"](false));
+  var isJust = maybe(false)(Data_Function["const"](true));
   var functorMaybe = {
       map: function (v) {
           return function (v1) {
@@ -290,6 +291,7 @@ var PS = {};
   exports["Just"] = Just;
   exports["maybe"] = maybe;
   exports["fromMaybe"] = fromMaybe;
+  exports["isJust"] = isJust;
   exports["isNothing"] = isNothing;
   exports["fromJust"] = fromJust;
   exports["functorMaybe"] = functorMaybe;
@@ -16613,6 +16615,17 @@ var PS = {};
     return s.length;
   };
 
+  exports._indexOf = function (just) {
+    return function (nothing) {
+      return function (x) {
+        return function (s) {
+          var i = s.indexOf(x);
+          return i === -1 ? nothing : just(i);
+        };
+      };
+    };
+  };
+
   exports.drop = function (n) {
     return function (s) {
       return s.substring(n);
@@ -16625,6 +16638,15 @@ var PS = {};
   $PS["Data.String.CodeUnits"] = $PS["Data.String.CodeUnits"] || {};
   var exports = $PS["Data.String.CodeUnits"];
   var $foreign = $PS["Data.String.CodeUnits"];
+  var Data_Maybe = $PS["Data.Maybe"];                                                                  
+  var indexOf = $foreign["_indexOf"](Data_Maybe.Just.create)(Data_Maybe.Nothing.value);
+  var contains = function (pat) {
+      var $20 = indexOf(pat);
+      return function ($21) {
+          return Data_Maybe.isJust($20($21));
+      };
+  };
+  exports["contains"] = contains;
   exports["singleton"] = $foreign.singleton;
   exports["length"] = $foreign.length;
   exports["drop"] = $foreign.drop;
@@ -18789,6 +18811,7 @@ var PS = {};
   var Data_Show = $PS["Data.Show"];
   var Data_Show_Generic = $PS["Data.Show.Generic"];
   var Data_String_CodePoints = $PS["Data.String.CodePoints"];
+  var Data_String_CodeUnits = $PS["Data.String.CodeUnits"];
   var Data_String_Common = $PS["Data.String.Common"];
   var Data_Tuple = $PS["Data.Tuple"];
   var Data_Unit = $PS["Data.Unit"];
@@ -18891,8 +18914,8 @@ var PS = {};
                   return Data_List_Types.Nil.value;
               };
               if (v1 === 0 && v2 instanceof Data_List_Types.Cons) {
-                  var $52 = v(v2.value0);
-                  if ($52) {
+                  var $59 = v(v2.value0);
+                  if ($59) {
                       return v2.value1;
                   };
                   return new Data_List_Types.Cons(v2.value0, v2.value1);
@@ -18900,7 +18923,7 @@ var PS = {};
               if (v2 instanceof Data_List_Types.Cons) {
                   return new Data_List_Types.Cons(v2.value0, removeNthIf(v)(v1 - 1 | 0)(v2.value1));
               };
-              throw new Error("Failed pattern match at Main (line 285, column 1 - line 285, column 67): " + [ v.constructor.name, v1.constructor.name, v2.constructor.name ]);
+              throw new Error("Failed pattern match at Main (line 313, column 1 - line 313, column 67): " + [ v.constructor.name, v1.constructor.name, v2.constructor.name ]);
           };
       };
   };
@@ -18914,15 +18937,15 @@ var PS = {};
               if (v instanceof Data_Maybe.Nothing) {
                   return l;
               };
-              throw new Error("Failed pattern match at Main (line 281, column 3 - line 283, column 17): " + [ v.constructor.name ]);
+              throw new Error("Failed pattern match at Main (line 309, column 3 - line 311, column 17): " + [ v.constructor.name ]);
           };
       };
   };
   var main = Control_Applicative.pure(Effect.applicativeEffect)(Data_Unit.unit);
   var ifEmpty = function (instead) {
       return function (str) {
-          var $59 = str === "";
-          if ($59) {
+          var $66 = str === "";
+          if ($66) {
               return instead;
           };
           return str;
@@ -18976,7 +18999,7 @@ var PS = {};
           if (x instanceof Data_Generic_Rep.Inr && x.value0 instanceof Data_Generic_Rep.Inr) {
               return OpenPar.value;
           };
-          throw new Error("Failed pattern match at Main (line 46, column 1 - line 46, column 48): " + [ x.constructor.name ]);
+          throw new Error("Failed pattern match at Main (line 47, column 1 - line 47, column 48): " + [ x.constructor.name ]);
       },
       from: function (x) {
           if (x instanceof NoTree) {
@@ -18988,7 +19011,7 @@ var PS = {};
           if (x instanceof OpenPar) {
               return new Data_Generic_Rep.Inr(new Data_Generic_Rep.Inr(Data_Generic_Rep.NoArguments.value));
           };
-          throw new Error("Failed pattern match at Main (line 46, column 1 - line 46, column 48): " + [ x.constructor.name ]);
+          throw new Error("Failed pattern match at Main (line 47, column 1 - line 47, column 48): " + [ x.constructor.name ]);
       }
   };
   var showError = {
@@ -19017,7 +19040,7 @@ var PS = {};
           if (x instanceof Data_Generic_Rep.Inr && x.value0 instanceof Data_Generic_Rep.Inr) {
               return EOT.value;
           };
-          throw new Error("Failed pattern match at Main (line 56, column 1 - line 56, column 44): " + [ x.constructor.name ]);
+          throw new Error("Failed pattern match at Main (line 57, column 1 - line 57, column 44): " + [ x.constructor.name ]);
       },
       from: function (x) {
           if (x instanceof Close) {
@@ -19029,7 +19052,7 @@ var PS = {};
           if (x instanceof EOT) {
               return new Data_Generic_Rep.Inr(new Data_Generic_Rep.Inr(Data_Generic_Rep.NoArguments.value));
           };
-          throw new Error("Failed pattern match at Main (line 56, column 1 - line 56, column 44): " + [ x.constructor.name ]);
+          throw new Error("Failed pattern match at Main (line 57, column 1 - line 57, column 44): " + [ x.constructor.name ]);
       }
   };
   var showEnd = {
@@ -19077,10 +19100,10 @@ var PS = {};
                       return done;
                   };
                   if (ml instanceof Data_Maybe.Just) {
-                      var $106 = Data_Eq.eq(Data_String_CodePoints.eqCodePoint)(ml.value0.head)(frc("_"));
-                      if ($106) {
-                          var $107 = Data_String_CodePoints.length(Data_String_CodePoints.takeWhile(Data_CodePoint_Unicode.isNumber)(ml.value0.tail)) > 0;
-                          if ($107) {
+                      var $113 = Data_Eq.eq(Data_String_CodePoints.eqCodePoint)(ml.value0.head)(frc("_"));
+                      if ($113) {
+                          var $114 = Data_String_CodePoints.length(Data_String_CodePoints.takeWhile(Data_CodePoint_Unicode.isNumber)(ml.value0.tail)) > 0;
+                          if ($114) {
                               $tco_var_s = Data_String_CodePoints.dropWhile(Data_CodePoint_Unicode.isNumber)(ml.value0.tail);
                               $copy_done = done + ("_{" + (Data_String_CodePoints.takeWhile(Data_CodePoint_Unicode.isNumber)(ml.value0.tail) + "}"));
                               return;
@@ -19093,7 +19116,7 @@ var PS = {};
                       $copy_done = done + Data_String_CodePoints.singleton(ml.value0.head);
                       return;
                   };
-                  throw new Error("Failed pattern match at Main (line 304, column 11 - line 313, column 58): " + [ ml.constructor.name ]);
+                  throw new Error("Failed pattern match at Main (line 332, column 11 - line 341, column 58): " + [ ml.constructor.name ]);
               };
               while (!$tco_done) {
                   $tco_result = $tco_loop($tco_var_s, $copy_done);
@@ -19144,7 +19167,7 @@ var PS = {};
                   var splitted = splitLineOnSharp(v.value0);
                   return go(Data_List.singleton(new Node(splitted.body, splitted.rule, children)))(v.value1);
               };
-              throw new Error("Failed pattern match at Main (line 78, column 9 - line 78, column 48): " + [ children.constructor.name, v.constructor.name ]);
+              throw new Error("Failed pattern match at Main (line 79, column 9 - line 79, column 48): " + [ children.constructor.name, v.constructor.name ]);
           };
       };
       return go(Data_List_Types.Nil.value);
@@ -19174,7 +19197,7 @@ var PS = {};
                       $tco_done = true;
                       return new Data_Either.Left(OpenPar.value);
                   };
-                  throw new Error("Failed pattern match at Main (line 106, column 9 - line 110, column 54): " + [ v.constructor.name ]);
+                  throw new Error("Failed pattern match at Main (line 107, column 9 - line 111, column 54): " + [ v.constructor.name ]);
               };
               while (!$tco_done) {
                   $tco_result = $tco_loop($tco_var_ts, $copy_ls1);
@@ -19205,7 +19228,7 @@ var PS = {};
               if (v instanceof Data_Either.Right) {
                   return $$default;
               };
-              throw new Error("Failed pattern match at Main (line 269, column 3 - line 272, column 38): " + [ v.constructor.name ]);
+              throw new Error("Failed pattern match at Main (line 296, column 3 - line 299, column 38): " + [ v.constructor.name ]);
           };
       };
   };
@@ -19221,7 +19244,7 @@ var PS = {};
           if (v instanceof Data_Either.Right) {
               return "{ is not closed";
           };
-          throw new Error("Failed pattern match at Main (line 257, column 3 - line 260, column 48): " + [ v.constructor.name ]);
+          throw new Error("Failed pattern match at Main (line 284, column 3 - line 287, column 48): " + [ v.constructor.name ]);
       };
   };
   var strToOriginal = strToConvertedStr(toOriginal);
@@ -19237,7 +19260,7 @@ var PS = {};
           if (v instanceof Data_Either.Right) {
               return "{ is not closed";
           };
-          throw new Error("Failed pattern match at Main (line 243, column 3 - line 246, column 48): " + [ v.constructor.name ]);
+          throw new Error("Failed pattern match at Main (line 269, column 3 - line 272, column 48): " + [ v.constructor.name ]);
       };
   };
   var escapeWith = function (rule) {
@@ -19246,8 +19269,8 @@ var PS = {};
               return function (v) {
                   return Data_String_CodePoints.fromCodePointArray(Control_Bind.bind(Control_Bind.bindArray)(Data_String_CodePoints.toCodePointArray(s))(function (c) {
                       return Data_String_CodePoints.toCodePointArray((function () {
-                          var $156 = Data_Eq.eq(Data_String_CodePoints.eqCodePoint)(c)(v.value0);
-                          if ($156) {
+                          var $163 = Data_Eq.eq(Data_String_CodePoints.eqCodePoint)(c)(v.value0);
+                          if ($163) {
                               return v.value1 + " ";
                           };
                           return Data_String_CodePoints.singleton(c);
@@ -19258,9 +19281,9 @@ var PS = {};
       };
   };
   var replaceForLaTeX = (function () {
-      var $264 = escapeWith(ruleLaTeXChars);
-      return function ($265) {
-          return replaceUnderbarNumToBlaced($264($265));
+      var $302 = escapeWith(ruleLaTeXChars);
+      return function ($303) {
+          return replaceUnderbarNumToBlaced($302($303));
       };
   })();
   var toLaTeX = function (tree) {
@@ -19272,7 +19295,7 @@ var PS = {};
               if (v.value1 instanceof Data_Maybe.Just) {
                   return new Data_List_Types.Cons("\\RightLabel{${\\scriptsize " + (v.value1.value0 + "}$}"), Data_List_Types.Nil.value);
               };
-              throw new Error("Failed pattern match at Main (line 119, column 21 - line 121, column 90): " + [ v.value1.constructor.name ]);
+              throw new Error("Failed pattern match at Main (line 120, column 21 - line 122, column 90): " + [ v.value1.constructor.name ]);
           })();
           var codeChildren = Control_Bind.bindFlipped(Data_List_Types.bindList)(go)(v.value2);
           var bodyReplaced = replaceForLaTeX(v.value0);
@@ -19299,8 +19322,8 @@ var PS = {};
           return function (indents) {
               return function (ids) {
                   return indents + ("<div class='subtree'>\x0a" + ((function () {
-                      var $169 = Data_List.length(v.value2) > 0;
-                      if ($169) {
+                      var $176 = Data_List.length(v.value2) > 0;
+                      if ($176) {
                           return indents + ("<div class='parents'>\x0a" + (Data_Foldable.intercalate(Data_List_Types.foldableList)(Data_Monoid.monoidString)("\x0a")(Data_Functor.map(Data_List_Types.functorList)(function (v1) {
                               return go(v1.value0)(indents + "  ")(new Data_List_Types.Cons(v1.value1, ids));
                           })(Data_List.zip(v.value2)(Data_List.range(0)(Data_List.length(v.value2))))) + (indents + ("</div>\x0a" + (indents + "<hr>\x0a")))));
@@ -19320,16 +19343,36 @@ var PS = {};
       return function (ixarr) {
           return function (newbody) {
               var go = function (v) {
-                  return function (nb) {
-                      return function (v1) {
+                  return function (v1) {
+                      return function (v2) {
+                          if (v instanceof Data_List_Types.Cons && (v.value1 instanceof Data_List_Types.Nil && v1 === "")) {
+                              return new Node(v2.value0, v2.value1, removeNthIf(function (v3) {
+                                  return Data_List["null"](v3.value2);
+                              })(v.value0)(v2.value2));
+                          };
                           if (v instanceof Data_List_Types.Nil) {
-                              var sp = splitLineOnSharp(nb);
-                              return new Node(sp.body, sp.rule, v1.value2);
+                              var sp = splitLineOnSharp(v1);
+                              var $$default = new Node(sp.body, sp.rule, v2.value2);
+                              var $195 = Data_List["null"](v2.value2) && Data_String_CodeUnits.contains("\x0a")(v1);
+                              if ($195) {
+                                  var v3 = parseFromStr(v1);
+                                  if (v3 instanceof Data_Either.Right && (v3.value0.value1 instanceof EOT && v3.value0.value2 instanceof Data_List_Types.Nil)) {
+                                      return v3.value0.value0;
+                                  };
+                                  if (v3 instanceof Data_Either.Right) {
+                                      return $$default;
+                                  };
+                                  if (v3 instanceof Data_Either.Left) {
+                                      return $$default;
+                                  };
+                                  throw new Error("Failed pattern match at Main (line 181, column 13 - line 184, column 33): " + [ v3.constructor.name ]);
+                              };
+                              return $$default;
                           };
                           if (v instanceof Data_List_Types.Cons) {
-                              return new Node(v1.value0, v1.value1, modifyNth(v.value0)(go(v.value1)(nb))(v1.value2));
+                              return new Node(v2.value0, v2.value1, modifyNth(v.value0)(go(v.value1)(v1))(v2.value2));
                           };
-                          throw new Error("Failed pattern match at Main (line 173, column 5 - line 175, column 34): " + [ v.constructor.name, nb.constructor.name, v1.constructor.name ]);
+                          throw new Error("Failed pattern match at Main (line 174, column 5 - line 175, column 62): " + [ v.constructor.name, v1.constructor.name, v2.constructor.name ]);
                       };
                   };
               };
@@ -19344,6 +19387,29 @@ var PS = {};
                   return _tryrewriteTreeWithIndex(t)(i)(b);
               });
           };
+      };
+  };
+  var _tryRuinWithIndex = function (oldtree) {
+      return function (ixarr) {
+          var go = function (v) {
+              return function (v1) {
+                  if (v instanceof Data_List_Types.Nil) {
+                      return new Node("", Data_Maybe.Nothing.value, Data_List_Types.Nil.value);
+                  };
+                  if (v instanceof Data_List_Types.Cons) {
+                      return new Node(v1.value0, v1.value1, modifyNth(v.value0)(go(v.value1))(v1.value2));
+                  };
+                  throw new Error("Failed pattern match at Main (line 223, column 5 - line 223, column 35): " + [ v.constructor.name, v1.constructor.name ]);
+              };
+          };
+          return go(Data_Array.toUnfoldable(Data_List_Types.unfoldableList)(ixarr))(oldtree);
+      };
+  };
+  var tryRuinWithIndex = function (s) {
+      return function (i) {
+          return strToMappedTree(s)(function (t) {
+              return _tryRuinWithIndex(t)(i);
+          });
       };
   };
   var _tryDelWithIndex = function (oldtree) {
@@ -19362,7 +19428,7 @@ var PS = {};
                       if (v instanceof Data_List_Types.Cons) {
                           return new Node(v1.value0, v1.value1, modifyNth(v.value0)(go(v.value1))(v1.value2));
                       };
-                      throw new Error("Failed pattern match at Main (line 201, column 5 - line 201, column 17): " + [ v.constructor.name, v1.constructor.name ]);
+                      throw new Error("Failed pattern match at Main (line 212, column 5 - line 212, column 17): " + [ v.constructor.name, v1.constructor.name ]);
                   };
               };
               return go(Data_Array.toUnfoldable(Data_List_Types.unfoldableList)(ixarr))(oldtree);
@@ -19388,7 +19454,7 @@ var PS = {};
                   if (v instanceof Data_List_Types.Cons) {
                       return new Node(v1.value0, v1.value1, modifyNth(v.value0)(go(v.value1))(v1.value2));
                   };
-                  throw new Error("Failed pattern match at Main (line 183, column 5 - line 184, column 60): " + [ v.constructor.name, v1.constructor.name ]);
+                  throw new Error("Failed pattern match at Main (line 194, column 5 - line 195, column 60): " + [ v.constructor.name, v1.constructor.name ]);
               };
           };
           return go(Data_Array.toUnfoldable(Data_List_Types.unfoldableList)(ixarr))(oldtree);
@@ -19411,7 +19477,7 @@ var PS = {};
                   if (v instanceof Data_List_Types.Cons) {
                       return new Node(v1.value0, v1.value1, modifyNth(v.value0)(go(v.value1))(v1.value2));
                   };
-                  throw new Error("Failed pattern match at Main (line 192, column 5 - line 193, column 44): " + [ v.constructor.name, v1.constructor.name ]);
+                  throw new Error("Failed pattern match at Main (line 203, column 5 - line 204, column 44): " + [ v.constructor.name, v1.constructor.name ]);
               };
           };
           return go(Data_Array.toUnfoldable(Data_List_Types.unfoldableList)(ixarr))(oldtree);
@@ -19422,6 +19488,29 @@ var PS = {};
           return strToMappedTree(s)(function (t) {
               return _tryAddParentLeftWithIndex(t)(i);
           });
+      };
+  };
+  var _subTreeToString = function (oldtree) {
+      return function (ixarr) {
+          var go = function (v) {
+              return function (v1) {
+                  if (v instanceof Data_List_Types.Nil) {
+                      return toOriginal(v1);
+                  };
+                  if (v instanceof Data_List_Types.Cons) {
+                      return Data_Maybe.fromMaybe("")(Data_Functor.map(Data_Maybe.functorMaybe)(go(v.value1))(Data_List.index(v1.value2)(v.value0)));
+                  };
+                  throw new Error("Failed pattern match at Main (line 263, column 5 - line 263, column 28): " + [ v.constructor.name, v1.constructor.name ]);
+              };
+          };
+          return go(Data_Array.toUnfoldable(Data_List_Types.unfoldableList)(ixarr))(oldtree);
+      };
+  };
+  var subTreeToString = function (s) {
+      return function (i) {
+          return strToConvertedA(function (t) {
+              return _subTreeToString(t)(i);
+          })(s)("");
       };
   };
   var _killEmptySubTrees = function (v) {
@@ -19448,7 +19537,7 @@ var PS = {};
                   if (v instanceof Data_List_Types.Cons) {
                       return Data_Maybe.fromMaybe(true)(Data_Functor.map(Data_Maybe.functorMaybe)(go(v.value1))(Data_List.index(v1.value2)(v.value0)));
                   };
-                  throw new Error("Failed pattern match at Main (line 225, column 5 - line 225, column 36): " + [ v.constructor.name, v1.constructor.name ]);
+                  throw new Error("Failed pattern match at Main (line 244, column 5 - line 244, column 36): " + [ v.constructor.name, v1.constructor.name ]);
               };
           };
           return go(Data_Array.toUnfoldable(Data_List_Types.unfoldableList)(ixarr))(tree);
@@ -19461,7 +19550,7 @@ var PS = {};
           })(s)(false);
       };
   };
-  var _getContentOfId = function (tree) {
+  var _getContentWithIndex = function (tree) {
       return function (ixarr) {
           var go = function (v) {
               return function (v1) {
@@ -19474,16 +19563,16 @@ var PS = {};
                   if (v instanceof Data_List_Types.Cons) {
                       return Data_Maybe.fromMaybe("")(Data_Functor.map(Data_Maybe.functorMaybe)(go(v.value1))(Data_List.index(v1.value2)(v.value0)));
                   };
-                  throw new Error("Failed pattern match at Main (line 238, column 5 - line 238, column 77): " + [ v.constructor.name, v1.constructor.name ]);
+                  throw new Error("Failed pattern match at Main (line 257, column 5 - line 257, column 77): " + [ v.constructor.name, v1.constructor.name ]);
               };
           };
           return go(Data_Array.toUnfoldable(Data_List_Types.unfoldableList)(ixarr))(tree);
       };
   };
-  var getContentOfId = function (s) {
+  var getContentWithIndex = function (s) {
       return function (i) {
           return strToConvertedA(function (t) {
-              return _getContentOfId(t)(i);
+              return _getContentWithIndex(t)(i);
           })(s)("");
       };
   };
@@ -19497,7 +19586,7 @@ var PS = {};
                   if (v instanceof Data_List_Types.Cons) {
                       return Data_Maybe.fromMaybe(0)(Data_Functor.map(Data_Maybe.functorMaybe)(go(v.value1))(Data_List.index(v1.value2)(v.value0)));
                   };
-                  throw new Error("Failed pattern match at Main (line 232, column 5 - line 232, column 40): " + [ v.constructor.name, v1.constructor.name ]);
+                  throw new Error("Failed pattern match at Main (line 251, column 5 - line 251, column 40): " + [ v.constructor.name, v1.constructor.name ]);
               };
           };
           return go(Data_Array.toUnfoldable(Data_List_Types.unfoldableList)(ixarr))(tree);
@@ -19540,14 +19629,17 @@ var PS = {};
   exports["_tryAddParentRightWithIndex"] = _tryAddParentRightWithIndex;
   exports["_tryAddParentLeftWithIndex"] = _tryAddParentLeftWithIndex;
   exports["_tryDelWithIndex"] = _tryDelWithIndex;
+  exports["_tryRuinWithIndex"] = _tryRuinWithIndex;
   exports["_addChild"] = _addChild;
   exports["_killEmptySubTrees"] = _killEmptySubTrees;
   exports["_isAxiom"] = _isAxiom;
   exports["_countChildren"] = _countChildren;
-  exports["_getContentOfId"] = _getContentOfId;
+  exports["_getContentWithIndex"] = _getContentWithIndex;
+  exports["_subTreeToString"] = _subTreeToString;
   exports["strToMappedTree"] = strToMappedTree;
   exports["addChild"] = addChild;
   exports["killEmptySubTrees"] = killEmptySubTrees;
+  exports["tryRuinWithIndex"] = tryRuinWithIndex;
   exports["tryDelWithIndex"] = tryDelWithIndex;
   exports["tryAddParentRightWithIndex"] = tryAddParentRightWithIndex;
   exports["tryAddParentLeftWithIndex"] = tryAddParentLeftWithIndex;
@@ -19559,7 +19651,8 @@ var PS = {};
   exports["strToConvertedA"] = strToConvertedA;
   exports["isAxiom"] = isAxiom;
   exports["countChildren"] = countChildren;
-  exports["getContentOfId"] = getContentOfId;
+  exports["getContentWithIndex"] = getContentWithIndex;
+  exports["subTreeToString"] = subTreeToString;
   exports["modifyNth"] = modifyNth;
   exports["removeNthIf"] = removeNthIf;
   exports["replaceForLaTeX"] = replaceForLaTeX;

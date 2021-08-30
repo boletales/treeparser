@@ -83,8 +83,10 @@
         moveUp(event.target);
       }else if(event.key == "ArrowDown"  && event.ctrlKey){
         moveDown(event.target);
+      }else if(event.key == "q"          && event.ctrlKey){
+        openText(event.target);
       }else if(event.key == "Delete"     && event.ctrlKey){
-        tryDelete(event.target);
+        tryDelete(event.target, event.shiftKey);
       }else{
         return true;
       }
@@ -108,7 +110,7 @@
       let _id = elem.id;
       if(_id.startsWith(idPrefix)){
         let id = toIdArr(_id);
-        str = _M.tryrewriteTreeWithIndex(str)(id)(elem.textContent);
+        str = _M.tryrewriteTreeWithIndex(str)(id)(elem.innerText);
       }
       refresh();
     }
@@ -191,39 +193,53 @@
       }
     }
 
-    function tryDelete(elem){
+    function openText(elem){
+      endInput(elem);
+      let _id = elem.id;
+      if(_id.startsWith(idPrefix)){
+        let id = toIdArr(_id);
+        let subtree = _M.subTreeToString(str)(id);
+        str = _M.tryRuinWithIndex(str)(id);
+        refresh();
+        getNode(id).innerText = subtree;
+        focusTo(id);
+      }
+    }
+
+    function tryDelete(elem,force){
       let _id = elem.id;
       if(_id.startsWith(idPrefix)){
         let id = toIdArr(_id);
         if(id.length==0){
         }else{
-          let cs    = _M.countChildren(str)(id);
-          if(cs == 0){
-            endInput(elem);
-            console.log(id);
-            let pid   = id.slice(0,-1);
-            let oldid = id[id.length-1];
-            let pcs   = _M.countChildren(str)(pid);
-            str = _M.tryDelWithIndex(str)(id)(true);
-            refresh();
-            if(pcs == 1){
-              focusTo(pid);
-            }else if(oldid == 0){
-              focusTo(pid.concat(0));
-            }else{
-              focusTo(pid.concat(oldid-1));
-            }
+          endInput(elem);
+          console.log(id);
+          let pid   = id.slice(0,-1);
+          let oldid = id[id.length-1];
+          let pcs   = _M.countChildren(str)(pid);
+          str = _M.tryDelWithIndex(str)(id)(force);
+          refresh();
+          if(pcs == 1){
+            focusTo(pid);
+          }else if(oldid == 0){
+            focusTo(pid.concat(0));
+          }else{
+            focusTo(pid.concat(oldid-1));
           }
         }
       }
     }
 
+    function getNode(id){
+      return document.getElementById(fromIdArr(id));
+    }
+
     function focusTo(id){
+      let elem = getNode(id);
       //console.log("focus to ", id);
-      let elem = document.getElementById(fromIdArr(id));
       elem.focus();
 
-      if(elem.textContent == "_"){
+      if(elem.innerText == "_"){
         let range = document.createRange();
         range.selectNodeContents(elem);
         let selection = window.getSelection();
