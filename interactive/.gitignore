@@ -1,0 +1,4 @@
+!*.html
+.spago
+output
+.psci_modules

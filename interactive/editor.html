@@ -1,0 +1,236 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <style>
+    body {
+      background-color: #fff;
+    }
+    hr {
+      margin: 2px;
+    }
+    .parents {
+      display: flex;
+      align-items: flex-end;
+    }
+    .subtree {
+      width: max-content;
+      margin-right: 0.2em;
+      margin-left: 0.2em;
+      text-align: center;
+    }
+    .node{
+      background-color: #eee;
+    }
+    .node:focus{
+      background-color: #ffd;
+    }
+  </style>
+  <title>interactive proof tree editor</title>
+  <script src="main.js"></script>
+  <script type='text/javascript' id='MathJax-script' async src='https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js'></script>
+</head>
+<body class="tex2jax_ignore">
+  <div id="editor">
+    
+  </div>
+  <br><br><br><br><br>
+  <textarea id="realtext" rows="10" cols="40"></textarea> <input type="button" onclick="load();" value="load">
+  <br>
+  <hr>
+  <input type="button" onclick="refreshLaTeX();" value="to LaTeX"><br>
+  <textarea id="latex"    rows="10" cols="40"></textarea>
+  <div id="viewer" class="tex2jax_process">
+    
+  </div>
+  <script>
+    const idPrefix = "node";
+    let str = "X";
+    let editor   = document.getElementById("editor");
+    let realtext = document.getElementById("realtext");
+    let latex    = document.getElementById("latex");
+    let viewer   = document.getElementById("viewer");
+    let _M = PS.Main;
+    refresh();
+    
+    function load(){
+      str = realtext.value;
+      refresh();
+    }
+
+
+    function refresh(){
+      editor.innerHTML = _M.strToHTML(str);
+      realtext.value   = _M.strToOriginal(str);
+    }
+
+    function refreshLaTeX(){
+      latex.value      = _M.strToLaTeX(str);
+      viewer.innerText = latex.value;
+      if(typeof MathJax != "undefined") MathJax.typesetPromise().then(()=>null);
+    }
+
+    function key(){
+      //console.log(event);
+      if(event.key == "Enter"){
+        endInput(event.target);
+      }else if(event.key == "ArrowRight" && event.ctrlKey){
+        moveRight(event.target);
+      }else if(event.key == "ArrowLeft"  && event.ctrlKey){
+        moveLeft(event.target);
+      }else if(event.key == "ArrowUp"    && event.ctrlKey){
+        moveUp(event.target);
+      }else if(event.key == "ArrowDown"  && event.ctrlKey){
+        moveDown(event.target);
+      }else if(event.key == "Delete"     && event.ctrlKey){
+        tryDelete(event.target);
+      }else{
+        return true;
+      }
+      event.preventDefault();
+      return false;
+    }
+
+    function focusout(){
+      endInput(event.target);
+    }
+
+    function toIdArr(str){
+      return str.slice(idPrefix.length).split("-").filter(x=>x!="").map(i=>parseInt(i));
+    }
+
+    function fromIdArr(arr){
+      return idPrefix + arr.join("-");
+    }
+
+    function endInput(elem){
+      let _id = elem.id;
+      if(_id.startsWith(idPrefix)){
+        let id = toIdArr(_id);
+        str = _M.tryrewriteTreeWithIndex(str)(id)(elem.textContent);
+      }
+      refresh();
+    }
+
+    function moveUp(elem){
+      endInput(elem);
+      let _id = elem.id;
+      if(_id.startsWith(idPrefix)){
+        let id = toIdArr(_id);
+        if(_M.countChildren(str)(id) == 0){
+          str = _M.tryAddParentLeftWithIndex(str)(id);
+          refresh();
+          focusTo(id.concat(0));
+        }else{
+          focusTo(id.concat(0));
+        }
+      }
+    }
+
+    function moveDown(elem){
+      endInput(elem);
+      let _id = elem.id;
+      if(_id.startsWith(idPrefix)){
+        let id = toIdArr(_id);
+        if(id.length==0){
+          str = _M.addChild(str);
+          refresh();
+          focusTo([]);
+        }else{
+          focusTo(id.slice(0,-1));
+        }
+      }
+    }
+
+    function moveLeft(elem){
+      endInput(elem);
+      let _id = elem.id;
+      if(_id.startsWith(idPrefix)){
+        let id = toIdArr(_id);
+        if(id.length==0){
+          str = _M.addChild(str);
+          str = _M.tryAddParentLeftWithIndex(str)([]);
+          refresh();
+          focusTo([0]);
+        }else{
+          let oldid = id[id.length-1];
+          let pid   = id.slice(0,-1);
+          if(oldid==0){
+            str = _M.tryAddParentLeftWithIndex(str)(pid);
+            refresh();
+            focusTo(pid.concat(oldid));
+          }else{
+            focusTo(pid.concat(oldid-1));
+          }
+        }
+      }
+    }
+
+    function moveRight(elem){
+      endInput(elem);
+      let _id = elem.id;
+      if(_id.startsWith(idPrefix)){
+        let id = toIdArr(_id);
+        if(id.length==0){
+          str = _M.addChild(str);
+          str = _M.tryAddParentRightWithIndex(str)([]);
+          refresh();
+          focusTo([1]);
+        }else{
+          let oldid = id[id.length-1];
+          let pid   = id.slice(0,-1);
+          if(oldid== _M.countChildren(str)(pid)-1){
+            str = _M.tryAddParentRightWithIndex(str)(pid);
+            refresh();
+            focusTo(pid.concat(oldid+1));
+          }else{
+            focusTo(pid.concat(oldid+1));
+          }
+        }
+      }
+    }
+
+    function tryDelete(elem){
+      let _id = elem.id;
+      if(_id.startsWith(idPrefix)){
+        let id = toIdArr(_id);
+        if(id.length==0){
+        }else{
+          let cs    = _M.countChildren(str)(id);
+          if(cs == 0){
+            endInput(elem);
+            console.log(id);
+            let pid   = id.slice(0,-1);
+            let oldid = id[id.length-1];
+            let pcs   = _M.countChildren(str)(pid);
+            str = _M.tryDelWithIndex(str)(id)(true);
+            refresh();
+            if(pcs == 1){
+              focusTo(pid);
+            }else if(oldid == 0){
+              focusTo(pid.concat(0));
+            }else{
+              focusTo(pid.concat(oldid-1));
+            }
+          }
+        }
+      }
+    }
+
+    function focusTo(id){
+      //console.log("focus to ", id);
+      let elem = document.getElementById(fromIdArr(id));
+      elem.focus();
+
+      if(elem.textContent == "_"){
+        let range = document.createRange();
+        range.selectNodeContents(elem);
+        let selection = window.getSelection();
+        selection.removeAllRanges();
+        selection.addRange(range);
+      }
+    }
+  </script>
+</body>
+</html>

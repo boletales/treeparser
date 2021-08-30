@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <style>
+    hr {
+      margin: 2px;
+    }
+    .parents {
+      display: flex;
+      align-items: flex-end;
+    }
+    .subtree {
+      width: max-content;
+      margin-right: 0.2em;
+      margin-left: 0.2em;
+      text-align: center;
+    }
+  </style>
+</head>
+<body>
+  <div class="subtree">
+    <div class="parents">
+      <div class="subtree">A</div>
+      <div class="subtree">
+        <div class="parents"><div class="subtree">B</div><div class="subtree">B→C</div></div>
+        <hr>
+        <span class="tnode" contenteditable="true">C</span>
+      </div>
+    </div>
+    <hr>
+    <span class="tnode" contenteditable="true">A∧C</span>
+  </div>
+</body>
+</html>
