@@ -19329,7 +19329,7 @@ var PS = {};
                           })(Data_List.zip(v.value2)(Data_List.range(0)(Data_List.length(v.value2))))) + (indents + ("</div>\x0a" + (indents + "<hr>\x0a")))));
                       };
                       return "";
-                  })() + (indents + ("<span class='node' contenteditable='true' id='" + (idPrefix + Data_Foldable.intercalate(Data_List_Types.foldableList)(Data_Monoid.monoidString)("-")(Data_Functor.map(Data_List_Types.functorList)(Data_Show.show(Data_Show.showInt))(Data_List.reverse(ids))) + ("' onkeydown='key();' focusout='focusout();' >" + (escapeWith(ruleHTMLChars)(unsplitLineOnSharp({
+                  })() + (indents + ("<span class='node' contenteditable='true' id='" + (idPrefix + Data_Foldable.intercalate(Data_List_Types.foldableList)(Data_Monoid.monoidString)("-")(Data_Functor.map(Data_List_Types.functorList)(Data_Show.show(Data_Show.showInt))(Data_List.reverse(ids))) + ("' onkeydown='key();' onfocusout='focusout();' >" + (escapeWith(ruleHTMLChars)(unsplitLineOnSharp({
                       body: v.value0,
                       rule: v.value1
                   })) + ("</span>\x0a" + (indents + "</div>\x0a")))))))));

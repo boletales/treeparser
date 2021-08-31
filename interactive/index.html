@@ -14,6 +14,13 @@
       display: flex;
       align-items: flex-end;
     }
+    .fbox{
+      display: flex;
+      align-items: flex-end;
+    }
+    .howtouse{
+      margin-left: 2em;
+    }
     .subtree {
       width: max-content;
       margin-right: 0.2em;
@@ -36,7 +43,26 @@
     
   </div>
   <br><br><br><br><br>
-  <textarea id="realtext" rows="10" cols="40"></textarea> <input type="button" onclick="load();" value="load">
+  <div class="fbox">
+    <div id="realout">
+      <textarea id="realtext" rows="10" cols="40"></textarea> <input type="button" onclick="load();" value="load">
+    </div>
+    <div class="howtouse">
+      コマンド：
+      <ul>
+        <li>Ctrl + ←↓↑→：移動（存在しなければ作成）</li>
+        <li>Ctrl + Delete：葉を削除（+Shift：枝を削除）</li>
+        <li>Ctrl + Q：枝のテキスト化（Enterで枝に戻す）</li>
+      </ul>
+    </div>
+    <div class="howtouse">
+      特殊記法：
+      <ul>
+        <li>_数字：LaTeX化時_{数字}に変換</li>
+        <li>#文字列：要素の右上に注釈(仮定解除とか)</li>
+      </ul>
+    </div>
+  </div>
   <br>
   <hr>
   <input type="button" onclick="refreshLaTeX();" value="to LaTeX"><br>
@@ -46,7 +72,8 @@
   </div>
   <script>
     const idPrefix = "node";
-    let str = "X";
+    const treekey = "tree";
+    let str      = loadTreeFromBrowser();
     let editor   = document.getElementById("editor");
     let realtext = document.getElementById("realtext");
     let latex    = document.getElementById("latex");
@@ -54,6 +81,20 @@
     let _M = PS.Main;
     refresh();
     
+    function saveTreeToBrowser(str){
+      localStorage.setItem(treekey,str);
+    }
+
+    function loadTreeFromBrowser(){
+      let s = localStorage.getItem(treekey);
+      if(s === null){
+        return "X";
+      }else{
+        return s;
+      }
+    }
+
+
     function load(){
       str = realtext.value;
       refresh();
@@ -63,6 +104,7 @@
     function refresh(){
       editor.innerHTML = _M.strToHTML(str);
       realtext.value   = _M.strToOriginal(str);
+      saveTreeToBrowser(str);
     }
 
     function refreshLaTeX(){

@@ -145,7 +145,7 @@ toHTML tree = go tree "" Nil
         indents ++! "</div>\n"  ++!
         indents ++! "<hr>\n"  
       else "") ++!
-      indents ++! "<span class='node' contenteditable='true' id='" ++! (idPrefix ++! intercalate "-" (map show $ reverse ids)) ++! "' onkeydown='key();' focusout='focusout();' >"  ++! (escapeWith ruleHTMLChars $ unsplitLineOnSharp {body:body,rule:rule}) ++! "</span>\n" ++!
+      indents ++! "<span class='node' contenteditable='true' id='" ++! (idPrefix ++! intercalate "-" (map show $ reverse ids)) ++! "' onkeydown='key();' onfocusout='focusout();' >"  ++! (escapeWith ruleHTMLChars $ unsplitLineOnSharp {body:body,rule:rule}) ++! "</span>\n" ++!
       --indents ++! "<input class='node' placeholder='_' id='" ++! (idPrefix ++! intercalate "-" (map show $ reverse ids)) ++! "' onkeydown='key();' focusout='focusout();' value='"  ++! (\s -> if s == "_" then "" else escapeWith ruleHTMLChars s) (unsplitLineOnSharp {body:body,rule:rule}) ++! "'>\n" ++!
       indents ++! "</div>\n"
 
