@@ -48,7 +48,7 @@
       <textarea id="realtext" rows="10" cols="40"></textarea> <input type="button" onclick="load();" value="load">
     </div>
     <div class="howtouse">
-      コマンド：
+      コマンド（CtrlはCommandで代用可）：
       <ul>
         <li>Ctrl + ←↓↑→：移動（存在しなければ作成）</li>
         <li>Ctrl + Delete：葉を削除（+Shift：枝を削除）</li>
@@ -115,19 +115,20 @@
 
     function key(){
       //console.log(event);
+      let ctrl = e.metaKey || event.ctrlKey;
       if(event.key == "Enter"){
         endInput(event.target);
-      }else if(event.key == "ArrowRight" && event.ctrlKey){
+      }else if(event.key == "ArrowRight" && ctrl){
         moveRight(event.target);
-      }else if(event.key == "ArrowLeft"  && event.ctrlKey){
+      }else if(event.key == "ArrowLeft"  && ctrl){
         moveLeft(event.target);
-      }else if(event.key == "ArrowUp"    && event.ctrlKey){
+      }else if(event.key == "ArrowUp"    && ctrl){
         moveUp(event.target);
-      }else if(event.key == "ArrowDown"  && event.ctrlKey){
+      }else if(event.key == "ArrowDown"  && ctrl){
         moveDown(event.target);
-      }else if(event.key == "q"          && event.ctrlKey){
+      }else if(event.key == "q"          && ctrl){
         openText(event.target);
-      }else if(event.key == "Delete"     && event.ctrlKey){
+      }else if(event.key == "Delete"     && ctrl){
         tryDelete(event.target, event.shiftKey);
       }else{
         return true;
