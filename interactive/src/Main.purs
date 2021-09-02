@@ -11,9 +11,10 @@ import Prelude
 
 import Data.Array as A
 import Data.Generic.Rep (class Generic)
-import Data.List (List(Nil), (:), concat, length, intercalate, foldl, reverse, filter, zip, range, singleton, index, take, drop, null)
+import Data.List (List(Nil), (:), head, elem, concat, length, intercalate, foldl, foldr, reverse, filter, zip, range, singleton, index, take, drop, null, snoc, mapMaybe)
 import Data.List.Lazy (Pattern)
 import Data.Map as M
+import Data.Set as S
 import Data.Show.Generic (genericShow)
 import Data.String.CodePoints (CodePoint)
 import Data.String.CodePoints as Stc
@@ -29,10 +30,15 @@ type Str = String
 
 infixr 5 append as ++!
 
+cons :: forall a. a -> List a -> List a
+cons a b = a : b
+
 strip' :: Str -> Str
 strip' = St.trim
 
-data Tree = Node Str (Maybe Str) (List Tree)
+data Tree = 
+  Node Str (Maybe Str) (List Tree)
+  --Import Str
 
 derive instance genericTree :: Generic Tree _
 instance showTree :: Show Tree where
@@ -42,7 +48,8 @@ instance showTree :: Show Tree where
 data Error =
     NoTree    |
     MultiRoot |
-    OpenPar
+    OpenPar   |
+    MultiDef Str
 
 derive instance genericError :: Generic Error _
 instance showError :: Show Error where
@@ -50,9 +57,10 @@ instance showError :: Show Error where
 
 
 data End =
-    Close |
-    Comma |
-    EOT
+    Close  |
+    Comma  |
+    EOT    |
+    SubRoot Str
     
 derive instance genericEnd :: Generic End _
 instance showEnd :: Show End where
@@ -65,30 +73,70 @@ derive instance genericClosed :: Generic Closed _
 instance showClosed :: Show Closed where
   show = genericShow
 
+parseFromStrToTree :: String -> Either Error Closed
+parseFromStrToTree str = readTree $ map strip' $ A.toUnfoldable $ St.split (Pattern "\n") str
+
+rootname :: Str
+rootname = "root"
+
+parseFromStrToTrees :: Str -> Either Error (M.Map Str Tree)
+parseFromStrToTrees str = go (A.toUnfoldable $ St.split (Pattern "\n") str) M.empty
+  where
+    go lines trees = 
+      case readTree $ map strip' lines of
+        Left e -> Left e
+        Right (Closed t (SubRoot sr) ls) -> 
+          if M.member sr trees || sr == rootname then
+            Left (MultiDef sr)
+          else
+            go ls (M.insert sr t trees)
+        
+        Right (Closed t EOT ls) -> Right (M.insert rootname t trees)
+        Right _                 -> Left OpenPar
 
 root :: (List Tree) -> End -> (List Str) -> Either Error Closed
-root children reason ls =
-    case children of
+root parents reason ls =
+    case parents of
         Nil   -> Left NoTree
         c:Nil -> Right $ Closed c reason ls
         _     -> Left MultiRoot
 
 readTree :: (List Str) -> Either Error Closed
 readTree = go Nil
+  where
+    go parents Nil = root parents EOT Nil
+    go parents (l:ls) =
+      case l of
+        ""  -> go parents ls
+        "{" -> do
+                result <- readBranches ls
+                go result.parents result.leftstr
+
+        "," -> root parents Comma ls
+    
+        "}" -> root parents Close ls
+
+        str -> let splitted = splitLineOnSharp str
+                in  case isSubRoot str of
+                      Just sr -> root parents (SubRoot sr) ls
+                      Nothing -> go (singleton(Node splitted.body splitted.rule parents)) ls
+
+readBranches :: (List Str) -> Either Error {parents :: (List Tree) , leftstr :: (List Str)}
+readBranches ls = (\(Tuple c l) -> {parents: reverse c, leftstr: l}) <$> go Nil ls
     where
-        go children Nil = root children EOT Nil
-        go children (l:ls) =
-            case l of
-                "{" -> do
-                        result <- readSubTrees ls
-                        go result.children result.leftstr
-    
-                "," -> root children Comma ls
-            
-                "}" -> root children Close ls
-    
-                str -> let splitted = splitLineOnSharp str
-                       in  go (singleton(Node splitted.body splitted.rule children)) ls
+      go ts ls =
+        case readTree ls of
+            Left x -> Left x
+            Right (Closed t Comma       l) -> go (t:ts) l
+            Right (Closed t Close       l) -> Right (Tuple (t:ts) l)
+            Right (Closed t (SubRoot _) l) -> Left OpenPar
+            Right (Closed t EOT         l) -> Left OpenPar
+
+isSubRoot :: Str -> Maybe Str
+isSubRoot str = Stc.stripPrefix (Pattern "@") $ strip' str
+
+isImport :: Str -> Maybe Str
+isImport str = Stc.stripPrefix (Pattern "$") $ strip' str
 
 splitLineOnSharp :: Str -> {body::Str, rule::Maybe Str}
 splitLineOnSharp str = {body: strip' body', 
@@ -99,209 +147,6 @@ splitLineOnSharp str = {body: strip' body',
 
 unsplitLineOnSharp :: {body::Str, rule::Maybe Str} -> Str
 unsplitLineOnSharp b = b.body ++! fromMaybe "" ((" #"++!_) <$> b.rule)
-
-readSubTrees :: (List Str) -> Either Error {children :: (List Tree) , leftstr :: (List Str)}
-readSubTrees ls = (\(Tuple c l) -> {children: reverse c, leftstr: l}) <$> go Nil ls
-    where
-      go ts ls =
-        case readTree ls of
-            Left x -> Left x
-            Right (Closed t Comma ls) -> go (t:ts) ls
-            Right (Closed t Close ls) -> Right (Tuple (t:ts) ls)
-            Right (Closed t EOT   ls) -> Left OpenPar
-
-toLaTeX :: Tree -> Str
-toLaTeX tree = "\\begin{prooftree}\n" ++! intercalate "\n" (go tree) ++! "\n\\end{prooftree}"
-    where
-        go (Node body rule children) =
-            let codeChildren = go =<< children
-
-                codeRule =
-                    case rule of
-                        Nothing -> Nil
-                        Just r  -> ("\\RightLabel{${\\scriptsize " ++! r ++! "}$}") : Nil
-
-                bodyReplaced = replaceForLaTeX body
-
-                codeBody =
-                    case length children of
-                        0 -> (     "\\AxiomC{$" ++! bodyReplaced ++! "$}") : Nil
-                        1 -> (  "\\UnaryInfC{$" ++! bodyReplaced ++! "$}") : Nil
-                        2 -> ( "\\BinaryInfC{$" ++! bodyReplaced ++! "$}") : Nil
-                        _ -> ("\\TrinaryInfC{$" ++! bodyReplaced ++! "$}") : Nil
-                        
-            in  concat (codeChildren : codeRule : codeBody : Nil)
-
-idPrefix = "node"
-toHTML :: Tree -> Str
-toHTML tree = go tree "" Nil
-  where 
-    indentunit = "  " 
-    go (Node body rule parents) indents ids =
-      indents ++! "<div class='subtree'>\n"  ++!
-      (if length parents > 0 then
-        indents ++! "<div class='parents'>\n"  ++!
-        intercalate "\n" (map (\(Tuple p i) -> go p (indents ++! indentunit) (i:ids)) (zip parents (range 0 (length parents)))) ++!
-        indents ++! "</div>\n"  ++!
-        indents ++! "<hr>\n"  
-      else "") ++!
-      indents ++! "<span class='node' contenteditable='true' id='" ++! (idPrefix ++! intercalate "-" (map show $ reverse ids)) ++! "' onkeydown='key();' onfocusout='focusout();' >"  ++! (escapeWith ruleHTMLChars $ unsplitLineOnSharp {body:body,rule:rule}) ++! "</span>\n" ++!
-      --indents ++! "<input class='node' placeholder='_' id='" ++! (idPrefix ++! intercalate "-" (map show $ reverse ids)) ++! "' onkeydown='key();' focusout='focusout();' value='"  ++! (\s -> if s == "_" then "" else escapeWith ruleHTMLChars s) (unsplitLineOnSharp {body:body,rule:rule}) ++! "'>\n" ++!
-      indents ++! "</div>\n"
-
-ifEmpty instead str = if str == "" then instead else str
-
-toOriginal :: Tree -> Str
-toOriginal tree = go tree ""
-  where
-    indentunit = "  "
-    go (Node body rule Nil) indents =
-      indents ++! unsplitLineOnSharp {body:ifEmpty "_" body,rule:rule}
-    
-    go (Node body rule (parent:Nil)) indents =
-      go parent indents ++! "\n" ++!
-      indents ++! unsplitLineOnSharp {body:ifEmpty "_" body,rule:rule}
-    
-    go (Node body rule parents) indents =
-      indents ++! "{\n" ++!
-      intercalate ("\n" ++! indents ++! ",\n") (map (\p -> go p (indents ++! indentunit)) parents) ++! "\n" ++!
-      indents ++! "}\n" ++!
-      indents ++! unsplitLineOnSharp {body:ifEmpty "_" body,rule:rule}
-
-_tryrewriteTreeWithIndex :: Tree -> Array Int -> Str -> Tree
-_tryrewriteTreeWithIndex oldtree ixarr newbody = go (A.toUnfoldable ixarr) newbody oldtree
-  where 
-    go (i:Nil) "" (Node ob or ps) = 
-      Node ob or (removeNthIf (\(Node _ _ p) -> null p) i ps)
-
-    go Nil nb (Node _ _ ps) = 
-      let sp = splitLineOnSharp nb
-          default = Node sp.body sp.rule ps
-      in  if null ps && Stc.contains (Pattern "\n") nb then
-            case parseFromStr nb of
-              Right (Closed t EOT Nil) -> t
-              Right _ -> default
-              Left  _ -> default
-          else
-            default
-    
-    go (i:is) nb (Node ob or ps) =
-      Node ob or (modifyNth i (go is nb) ps)
-
-_tryAddParentRightWithIndex :: Tree -> Array Int -> Tree
-_tryAddParentRightWithIndex oldtree ixarr = go (A.toUnfoldable ixarr) oldtree
-  where 
-    go Nil (Node ob or ps) = 
-      Node ob or (ps ++! (singleton $ Node "" Nothing Nil))
-    
-    go (i:is) (Node ob or ps) =
-      Node ob or (modifyNth i (go is) ps)
-
-_tryAddParentLeftWithIndex :: Tree -> Array Int -> Tree
-_tryAddParentLeftWithIndex oldtree ixarr = go (A.toUnfoldable ixarr) oldtree
-  where 
-    go Nil (Node ob or ps) = 
-      Node ob or (Node "" Nothing Nil : ps)
-    
-    go (i:is) (Node ob or ps) =
-      Node ob or (modifyNth i (go is) ps)
-
-_tryDelWithIndex :: Tree -> Array Int -> Boolean -> Tree
-_tryDelWithIndex oldtree ixarr forceDel = go (A.toUnfoldable ixarr) oldtree
-  where 
-    go Nil x = x
-
-    go (i:Nil) (Node ob or ps) = 
-      Node ob or (removeNthIf (\(Node _ _ p) -> null p || forceDel) i ps)
-    
-    go (i:is) (Node ob or ps) =
-      Node ob or (modifyNth i (go is) ps)
-
-_tryRuinWithIndex :: Tree -> Array Int -> Tree
-_tryRuinWithIndex oldtree ixarr = go (A.toUnfoldable ixarr) oldtree
-  where 
-    go Nil x = Node "" Nothing Nil
-    
-    go (i:is) (Node ob or ps) =
-      Node ob or (modifyNth i (go is) ps)
-
-_addChild :: Tree -> Tree
-_addChild oldtree = Node "" Nothing (singleton oldtree)
-
-_killEmptySubTrees :: Tree -> Tree
-_killEmptySubTrees (Node body rule children) = 
-  Node body rule (filter (
-      \child -> 
-        case child of
-          Node "" Nothing Nil -> false
-          x                   -> true
-    ) children)
-
-
-_isAxiom :: Tree -> Array Int -> Boolean
-_isAxiom tree ixarr = go (A.toUnfoldable ixarr) tree
-  where 
-    go Nil    (Node _ _ Nil) = true
-    go Nil    (Node _ _ _)   = false
-    go (i:is) (Node _ _ ps)  = fromMaybe true (go is <$> index ps i)
-
-_countChildren :: Tree -> Array Int -> Int
-_countChildren tree ixarr = go (A.toUnfoldable ixarr) tree
-  where 
-    go Nil    (Node _ _ ps) = length ps
-    go (i:is) (Node _ _ ps) = fromMaybe 0 (go is <$> index ps i)
-
-_getContentWithIndex :: Tree -> Array Int -> Str
-_getContentWithIndex tree ixarr = go (A.toUnfoldable ixarr) tree
-  where 
-    go Nil    (Node body rule ps) = unsplitLineOnSharp {body:body,rule:rule}
-    go (i:is) (Node body rule ps) = fromMaybe "" (go is <$> index ps i)
-
-_subTreeToString :: Tree -> Array Int -> Str
-_subTreeToString oldtree ixarr = go (A.toUnfoldable ixarr) oldtree
-  where 
-    go Nil x = toOriginal x
-    
-    go (i:is) (Node ob or ps) = fromMaybe "" (go is <$> index ps i)
-
-strToMappedTree :: Str -> (Tree -> Tree) -> Str
-strToMappedTree str f = 
-  case parseFromStr str of
-    Left error             -> show error
-    Right (Closed t EOT _) -> toOriginal $ f t
-    Right _                -> "{ is not closed"
-
-addChild                   s     = strToMappedTree s _addChild
-killEmptySubTrees          s     = strToMappedTree s _killEmptySubTrees
-tryRuinWithIndex           s i   = strToMappedTree s (\t -> _tryRuinWithIndex           t i)
-tryDelWithIndex            s i f = strToMappedTree s (\t -> _tryDelWithIndex            t i f)
-tryAddParentRightWithIndex s i   = strToMappedTree s (\t -> _tryAddParentRightWithIndex t i)
-tryAddParentLeftWithIndex  s i   = strToMappedTree s (\t -> _tryAddParentLeftWithIndex  t i)
-tryrewriteTreeWithIndex    s i b = strToMappedTree s (\t -> _tryrewriteTreeWithIndex    t i b)
-
-strToConvertedStr :: (Tree -> Str) -> Str -> Str
-strToConvertedStr tostr str = 
-  case parseFromStr str of
-    Left error             -> show error
-    Right (Closed t EOT _) -> tostr t
-    Right _                -> "{ is not closed"
-
-strToHTML     = strToConvertedStr toHTML
-strToLaTeX    = strToConvertedStr toLaTeX
-strToOriginal = strToConvertedStr toOriginal
-
-
-strToConvertedA :: forall a. (Tree -> a) -> Str -> a -> a
-strToConvertedA f str default = 
-  case parseFromStr str of
-    Left  _                -> default
-    Right (Closed t EOT _) -> f t
-    Right _                -> default
-
-isAxiom             s i = strToConvertedA (\t -> _isAxiom             t i) s false
-countChildren       s i = strToConvertedA (\t -> _countChildren       t i) s 0
-getContentWithIndex s i = strToConvertedA (\t -> _getContentWithIndex t i) s ""
-subTreeToString     s i = strToConvertedA (\t -> _subTreeToString     t i) s ""
 
 
 modifyNth :: forall a. Int -> (a -> a) -> List a -> List a
@@ -314,6 +159,395 @@ removeNthIf :: forall a. (a -> Boolean) -> Int -> List a -> List a
 removeNthIf _ _ Nil = Nil
 removeNthIf f 0 (x:xs) = if f x then xs else x:xs
 removeNthIf f n (x:xs) = x : removeNthIf f (n-1) xs
+
+getBranchById :: Array Int -> Tree -> Maybe Tree
+getBranchById id tree = go (A.toUnfoldable id) tree
+  where 
+    go Nil x = Just x
+    go (i:is) (Node ob or ps) = (go is =<< index ps i)
+
+_tryModifyTreeWithIndex :: Array Int -> Tree -> Tree -> Tree
+_tryModifyTreeWithIndex ixarr newbranch oldtree = go (A.toUnfoldable ixarr) newbranch oldtree
+  where 
+    go Nil nb _ = nb
+    
+    go (i:is) nb (Node ob or ps) =
+      Node ob or (modifyNth i (go is nb) ps)
+
+_tryRewriteTreeWithIndex :: Array Int -> Str -> Tree -> Tree
+_tryRewriteTreeWithIndex ixarr newbody oldtree = go (A.toUnfoldable ixarr) newbody oldtree
+  where 
+    -- go _ _ (Import tree) = (Import tree)
+
+    go (i:Nil) "" (Node ob or ps) = 
+      Node ob or (removeNthIf 
+        (\t -> case t of
+                  (Node _ _ p) -> null p
+                  _  -> false
+                ) i ps)
+
+    go Nil nb (Node _ _ ps) = 
+      let sp = splitLineOnSharp nb
+          default = Node sp.body sp.rule ps
+      in  if null ps && Stc.contains (Pattern "\n") nb then
+            case parseFromStrToTree nb of
+              Right (Closed t EOT Nil) -> t
+              Right _ -> default
+              Left  _ -> default
+          else
+            default
+    
+    go (i:is) nb (Node ob or ps) =
+      Node ob or (modifyNth i (go is nb) ps)
+
+_tryAddParentRightWithIndex :: Array Int -> Tree -> Tree
+_tryAddParentRightWithIndex ixarr oldtree = go (A.toUnfoldable ixarr) oldtree
+  where 
+    go Nil (Node ob or ps) = 
+      Node ob or (ps ++! (singleton $ Node "" Nothing Nil))
+    
+    go (i:is) (Node ob or ps) =
+      Node ob or (modifyNth i (go is) ps)
+
+_tryAddParentLeftWithIndex :: Array Int -> Tree -> Tree
+_tryAddParentLeftWithIndex ixarr oldtree = go (A.toUnfoldable ixarr) oldtree
+  where 
+    go Nil (Node ob or ps) = 
+      Node ob or (Node "" Nothing Nil : ps)
+    
+    go (i:is) (Node ob or ps) =
+      Node ob or (modifyNth i (go is) ps)
+
+_tryDelWithIndex :: Array Int -> Boolean -> Tree -> Tree
+_tryDelWithIndex ixarr forceDel oldtree = go (A.toUnfoldable ixarr) oldtree
+  where 
+    go Nil x = x
+
+    -- go _ (Import a) = Import a
+
+    go (i:Nil) (Node ob or ps) = 
+      Node ob or (removeNthIf (\(Node _ _ p) -> null p || forceDel) i ps)
+    
+    go (i:is) (Node ob or ps) =
+      Node ob or (modifyNth i (go is) ps)
+
+_tryRuinWithIndex :: Array Int -> Tree -> Tree
+_tryRuinWithIndex ixarr oldtree = go (A.toUnfoldable ixarr) oldtree
+  where 
+    go Nil x = Node "" Nothing Nil
+
+    -- go _ (Import a) = Import a
+    
+    go (i:is) (Node ob or ps) =
+      Node ob or (modifyNth i (go is) ps)
+
+_tryInsertWithIndex :: Array Int -> Tree -> Tree
+_tryInsertWithIndex ixarr oldtree = go (A.toUnfoldable ixarr) oldtree
+  where 
+    go Nil x = 
+      Node "" Nothing (singleton x)
+    
+    go (i:is) (Node ob or ps) =
+      Node ob or (modifyNth i (go is) ps)
+
+_trySquashWithIndex :: Array Int -> Tree -> Tree
+_trySquashWithIndex ixarr oldtree = go (A.toUnfoldable ixarr) oldtree
+  where 
+    go Nil (Node _ _ (p:Nil)) = p
+
+    go Nil x = x
+    
+    go (i:is) (Node ob or ps) =
+      Node ob or (modifyNth i (go is) ps)
+
+_tryMakeNewSubTree :: Tree -> (M.Map Str Tree) -> (Tuple Str (M.Map Str Tree))
+_tryMakeNewSubTree tree dict = go 1
+  where 
+    name i = "subtree" ++! show i
+    go i =
+      if M.member (name i) dict then
+        go (i+1)
+      else
+        Tuple (name i) (M.insert (name i) tree dict)
+
+_tryMakeEmptySubTree :: (M.Map Str Tree) -> (M.Map Str Tree)
+_tryMakeEmptySubTree = snd <<< _tryMakeNewSubTree (Node "" Nothing Nil)
+
+_tryMakeBranchSubTree :: Str -> Array Int -> (M.Map Str Tree) -> (M.Map Str Tree)
+_tryMakeBranchSubTree name id dict = 
+  case M.lookup name dict of
+    Nothing   -> dict
+    Just tree -> 
+      case getBranchById id tree of
+        Nothing     -> dict
+        Just branch -> (\(Tuple newname newdict) -> M.insert name (_tryRewriteTreeWithIndex id ("$"++!newname) tree) newdict) $ _tryMakeNewSubTree branch dict
+
+_tryApplyToAllTrees :: (Str -> Str) -> (M.Map Str Tree) -> (M.Map Str Tree)
+_tryApplyToAllTrees f dict = M.mapMaybe (pure <$> go) dict
+  where
+    go (Node body rule ps) = Node (f body) rule (map go ps)
+
+_tryRenameSubTree :: Str -> Str -> (M.Map Str Tree) -> (M.Map Str Tree)
+_tryRenameSubTree from to dict =
+  if from == rootname then
+    dict
+  else
+    case M.lookup from dict of
+      Nothing   -> dict
+      Just tree -> 
+        case M.lookup to dict of
+          Just _  -> dict
+          Nothing -> _tryApplyToAllTrees (\b -> if isImport b == Just from then "$"++!to else b) $ M.insert to tree $ M.delete from dict
+
+_tryDeleteSubTree :: Boolean -> Str -> (M.Map Str Tree) -> (M.Map Str Tree)
+_tryDeleteSubTree force name dict =
+  if name == rootname then
+    dict
+  else
+    case M.lookup name dict of
+      Just (Node _ _ Nil) -> M.delete name dict
+      Just (Node _ _ _)   -> if force then M.delete name dict else dict
+      _                   -> dict
+
+_tryInline :: Str -> Array Int -> (M.Map Str Tree) -> (M.Map Str Tree)
+_tryInline name id dict = fromMaybe dict (do
+    t <- M.lookup name dict
+    (Node b _ _) <- getBranchById id t
+    i  <- isImport b
+    it <- M.lookup i dict
+    Just $ M.insert name (_tryModifyTreeWithIndex id it t) dict
+  )
+
+_addChild :: Tree -> Tree
+_addChild oldtree = Node "" Nothing (singleton oldtree)
+
+_killEmptyBranches :: Tree -> Tree
+_killEmptyBranches (Node body rule parents) = 
+  Node body rule (filter (
+      \child -> 
+        case child of
+          Node "" Nothing Nil -> false
+          x                   -> true
+    ) parents)
+
+
+
+
+_countParents :: Array Int -> Tree -> Int
+_countParents ixarr tree = fromMaybe 0 ((\(Node _ _ ps) -> length ps) <$> getBranchById ixarr tree)
+
+_isNodeAxiom :: Array Int -> Tree -> Boolean
+_isNodeAxiom ixarr tree =
+  case getBranchById ixarr tree of 
+    Just (Node _ _ Nil) -> true
+    _                   -> false
+
+_isNodeImport :: Array Int -> Tree -> {isImport:: Boolean, importOf:: Str}
+_isNodeImport ixarr tree =
+  case getBranchById ixarr tree of 
+    Just (Node b _ Nil) -> maybe {isImport: false, importOf: ""} (\s -> {isImport: true, importOf: s}) (isImport b)
+    _                   -> {isImport: false, importOf: ""}
+  
+
+_getContentWithIndex :: Array Int -> Tree -> Str
+_getContentWithIndex ixarr tree = 
+  case getBranchById ixarr tree of 
+    Just (Node body rule ps) -> unsplitLineOnSharp {body:body,rule:rule}
+    _                        -> ""
+
+_branchToString :: Array Int -> Tree -> Str
+_branchToString ixarr tree = 
+  case getBranchById ixarr tree of 
+    Just x -> toOriginal x
+    _      -> ""
+
+strToMappedTree :: Str -> (Tree -> Tree) -> Str
+strToMappedTree str f = 
+  case parseFromStrToTree str of
+    Left error             -> show error
+    Right (Closed t EOT _) -> toOriginal $ f t
+    Right _                -> "{ is not closed"
+
+strToMappedTrees :: Str -> ((M.Map Str Tree) -> (M.Map Str Tree)) -> Str
+strToMappedTrees str f = 
+  case parseFromStrToTrees str of
+    Left error -> show error
+    Right m    -> treesToOriginal $ f m
+
+applyToTrees :: Str -> (Tree -> Tree) -> ((M.Map Str Tree) -> (M.Map Str Tree))
+applyToTrees n f = M.alter ((<$>) f) n
+
+addChild                   str name      = strToMappedTrees str $ applyToTrees name $ _addChild
+killEmptyBranches          str name      = strToMappedTrees str $ applyToTrees name $ _killEmptyBranches
+tryRuinWithIndex           str name id   = strToMappedTrees str $ applyToTrees name $ _tryRuinWithIndex           id  
+tryDelWithIndex            str name id f = strToMappedTrees str $ applyToTrees name $ _tryDelWithIndex            id f
+tryAddParentRightWithIndex str name id   = strToMappedTrees str $ applyToTrees name $ _tryAddParentRightWithIndex id  
+tryAddParentLeftWithIndex  str name id   = strToMappedTrees str $ applyToTrees name $ _tryAddParentLeftWithIndex  id  
+tryRewriteTreeWithIndex    str name id b = strToMappedTrees str $ applyToTrees name $ _tryRewriteTreeWithIndex    id b
+tryInsertWithIndex         str name id   = strToMappedTrees str $ applyToTrees name $ _tryInsertWithIndex         id
+trySquashWithIndex         str name id   = strToMappedTrees str $ applyToTrees name $ _trySquashWithIndex         id
+tryMakeBranchSubTree       str name id   = strToMappedTrees str $ _tryMakeBranchSubTree name id
+tryRenameSubTree           str from to   = strToMappedTrees str $ _tryRenameSubTree from to
+tryDeleteSubTree           str name f    = strToMappedTrees str $ _tryDeleteSubTree f name
+tryMakeEmptySubTree        str           = strToMappedTrees str $ _tryMakeEmptySubTree
+tryCleanSubTrees           str f         = strToMappedTrees str $ \dict -> foldr (_tryDeleteSubTree f) dict (M.keys dict)
+tryInline                  str name id   = strToMappedTrees str $ _tryInline name id
+
+strToConvertedA :: forall a. (Tree -> a) -> Str -> Str -> a -> a
+strToConvertedA f str id default = 
+  case (M.lookup id) <$> parseFromStrToTrees str of
+    Left  _        -> default
+    Right Nothing  -> default
+    Right (Just t) -> f t
+
+isNodeAxiom         s t i = strToConvertedA (_isNodeAxiom         i) s t false
+isNodeImport        s t i = strToConvertedA (_isNodeImport        i) s t {isImport: false, importOf: ""}
+countParents        s t i = strToConvertedA (_countParents        i) s t 0
+getContentWithIndex s t i = strToConvertedA (_getContentWithIndex i) s t ""
+branchToString      s t i = strToConvertedA (_branchToString      i) s t ""
+getSubTrees         s     = either (const []) (A.fromFoldable <<< getTreesName_rootFirst) (parseFromStrToTrees s)
+
+strToConvertedStr :: (Tree -> Str) -> Str -> Str
+strToConvertedStr tostr str = 
+  case parseFromStrToTree str of
+    Left error             -> show error
+    Right (Closed t EOT _) -> tostr t
+    Right _                -> "{ is not closed"
+
+strToHTML     s t = (either show (subTreeToHTML t) <<< parseFromStrToTrees) s 
+strToLaTeX    s   = (either show toLaTeX           <<< parseFromStrToTrees) s
+strToOriginal s   = (strToConvertedStr toOriginal) s
+
+toLaTeX :: M.Map Str Tree -> Str
+toLaTeX dict = 
+  case M.lookup rootname dict of
+    Nothing   -> "No root tree."
+    Just tree -> "\\begin{prooftree}\n" ++! intercalate "\n" (go (singleton rootname) tree) ++! "\n\\end{prooftree}"
+      where
+        go imported (Node body rule parents)=
+            case isImport body of
+              Just i -> 
+                if elem i imported then
+                  singleton $ "circular reference of " ++! i
+                else case M.lookup i dict of
+                        Nothing -> singleton $ "no tree named " ++! i
+                        Just t  -> go (i:imported) t
+              Nothing ->
+                let codeParents = (go imported) =<< parents
+
+                    codeRule =
+                        case rule of
+                            Nothing -> Nil
+                            Just r  -> ("\\RightLabel{${\\scriptsize " ++! r ++! "}$}") : Nil
+
+                    bodyReplaced = replaceForLaTeX body
+
+                    codeBody =
+                        case length parents of
+                            0 -> (     "\\AxiomC{$" ++! bodyReplaced ++! "$}") : Nil
+                            1 -> (  "\\UnaryInfC{$" ++! bodyReplaced ++! "$}") : Nil
+                            2 -> ( "\\BinaryInfC{$" ++! bodyReplaced ++! "$}") : Nil
+                            _ -> ("\\TrinaryInfC{$" ++! bodyReplaced ++! "$}") : Nil
+                            
+                in  concat (codeParents : codeRule : codeBody : Nil)
+
+idPrefix :: Str
+idPrefix = "node"
+
+idPrefix_import :: Str
+idPrefix_import = "import"
+
+idPrefix_check :: Str
+idPrefix_check = "show"
+
+subTreeToHTML :: Str -> (M.Map Str Tree) -> Str
+subTreeToHTML name dict = -- go tree "" Nil
+  case M.lookup name dict of
+    Nothing   -> "No such tree."
+    Just tree -> go (singleton name) tree "" Nil name
+      where
+        indentunit = "  " 
+        go imported (Node body rule parents) indents ids log=
+          case isImport body of
+            Just i -> 
+              if elem i imported then
+                "circular reference of " ++! i
+              else
+                indents ++! "<div class='branch'>\n"  ++!(
+                  case M.lookup i dict of
+                    Nothing -> "[tree not found: " ++! i ++! "]<br>" ++!
+                      indents ++! "<span class='node editable' contenteditable='true' id='" 
+                        ++! (idPrefix ++! "_" ++! log)
+                        ++! "' onkeydown='key();' onfocusout='focusout();' >"  ++! (escapeWith ruleHTMLChars $ unsplitLineOnSharp {body:body,rule:rule}) ++! "</span>\n"
+
+                    Just t  -> 
+                      indents ++! "<input type='checkbox' id='" 
+                        ++! (idPrefix_check ++! "_" ++! log)
+                        ++! "' class='treeswitch'>\n" ++!
+                      indents ++! "<div class='parents imported'>\n" ++!
+                      go (i:imported) t (indents ++! indentunit) Nil (log ++! "_" ++! i) ++!
+                      indents ++! "</div>\n"  ++!
+                      indents ++! "<span type='checkbox'>\n" ++!
+                      indents ++! "<label type='checkbox' for='" 
+                        ++! (idPrefix_check ++! "_" ++! log)
+                        ++! "' class='switchlabel'>↑</label>\n" ++!
+                      indents ++! "<span class='omitted'>\n" ++!
+                      "(" ++! escapeWith ruleHTMLChars ((\(Node b _ _) -> b) t) ++! ")" ++!
+                      indents ++! "</span>\n"++!
+                      indents ++! "<span class='node editable' contenteditable='true' id='" 
+                        ++! (idPrefix ++! "_" ++! log)
+                        ++! "' onkeydown='key();' onfocusout='focusout();' >"  ++! (escapeWith ruleHTMLChars $ unsplitLineOnSharp {body:body,rule:rule}) ++! "</span>\n" ++!
+                      indents ++! "</span>\n"
+                ) ++!
+                indents ++! "</div>\n"
+            
+            Nothing ->
+              indents ++! "<div class='branch'>\n"  ++!
+              (if length parents > 0 then
+                indents ++! "<div class='parents'>\n"  ++!
+                intercalate "\n" (map (\(Tuple p i) -> go imported p (indents ++! indentunit) (i:ids) (log ++! "-" ++! show i)) (zip parents (range 0 (length parents)))) ++!
+                indents ++! "</div>\n"  ++!
+                indents ++! "<hr class='proofline'>\n"  
+              else "") ++!
+              indents ++! "<span class='node editable' contenteditable='true' id='" 
+                ++! (idPrefix  ++! "_" ++! log)
+                ++! "' onkeydown='key();' onfocusout='focusout();' >"  ++! (escapeWith ruleHTMLChars $ unsplitLineOnSharp {body:body,rule:rule}) ++! "</span>\n" ++!
+              indents ++! "</div>\n"
+
+ifEmpty :: Str -> Str -> Str
+ifEmpty instead str = if str == "" then instead else str
+
+placeHolder = "_"
+
+toOriginal :: Tree -> Str
+toOriginal tree = go tree ""
+  where
+    indentunit = "  "
+    -- go (Import name) indents =
+    --   indents ++! "$" ++! name
+
+    go (Node body rule Nil) indents =
+      indents ++! unsplitLineOnSharp {body:ifEmpty placeHolder body,rule:rule}
+    
+    go (Node body rule (parent:Nil)) indents =
+      go parent indents ++! "\n" ++!
+      indents ++! unsplitLineOnSharp {body:ifEmpty placeHolder body,rule:rule}
+    
+    go (Node body rule parents) indents =
+      indents ++! "{\n" ++!
+      intercalate ("\n" ++! indents ++! ",\n") (map (\p -> go p (indents ++! indentunit)) parents) ++! "\n" ++!
+      indents ++! "}\n" ++!
+      indents ++! unsplitLineOnSharp {body:ifEmpty placeHolder body,rule:rule}
+
+treesToOriginal :: M.Map Str Tree -> Str
+treesToOriginal dict =
+  intercalate "\n" $ mapMaybe (\k -> (\t -> toOriginal t ++! if k == rootname then "" else ("\n@" ++! k ++! "\n\n")) <$> M.lookup k dict) $ getTreesName_rootLast dict
+
+getTreesName_rootFirst :: M.Map Str Tree -> List Str
+getTreesName_rootFirst dict =      cons rootname (S.toUnfoldable $ (S.filter (_ /= rootname)) (M.keys dict))
+
+getTreesName_rootLast :: M.Map Str Tree -> List Str
+getTreesName_rootLast  dict = flip snoc rootname (S.toUnfoldable $ (S.filter (_ /= rootname)) (M.keys dict))
 
 replaceForLaTeX :: Str -> Str
 replaceForLaTeX = replaceUnderbarNumToBlaced <<< escapeWith ruleLaTeXChars
@@ -340,8 +574,7 @@ replaceUnderbarNumToBlaced str = go str ""
               else
                 go l.tail (done ++! Stc.singleton l.head)
 
-parseFromStr :: String -> Either Error Closed
-parseFromStr str = readTree $ map strip' $ A.toUnfoldable $ St.split (Pattern "\n") str
+      
 
 frc :: Char -> CodePoint
 frc = Stc.codePointFromChar
@@ -362,6 +595,7 @@ ruleHTMLChars =
 ruleLaTeXChars :: M.Map CodePoint Str
 ruleLaTeXChars =
     M.fromFoldable $ [
+        Tuple (frc '$') "\\$",
         Tuple (frc '∀') "\\forall",
         Tuple (frc '∈') "\\in",
         Tuple (frc '├') "\\vdash",

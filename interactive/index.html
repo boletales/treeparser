@@ -21,26 +21,60 @@
     .howtouse{
       margin-left: 2em;
     }
-    .subtree {
+    .branch {
       width: max-content;
       margin-right: 0.2em;
       margin-left: 0.2em;
       text-align: center;
     }
-    .node{
+    .editable{
       background-color: #eee;
     }
-    .node:focus{
+    .editable:focus{
       background-color: #ffd;
+    }
+    .imported{
+      background-color: #eef;
+      display: none;
+    }
+    :checked ~ .imported{
+      display: inherit;
+      width: max-content;
+    }
+    .omitted{
+      color: #888;
+    }
+    :checked ~ * > .omitted{
+      display: none;
+    }
+    .treeswitch{
+      display: none;
+    }
+    .switchlabel{
+      color: lightblue;
+    }
+    :checked ~ * > .switchlabel{
+      color: blue;
+    }
+    #selector{
+      display: inline;
     }
   </style>
   <title>interactive proof tree editor</title>
   <script src="main.js"></script>
   <script type='text/javascript' id='MathJax-script' async src='https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js'></script>
 </head>
-<body class="tex2jax_ignore">
+<body class="tex2jax_ignore" onkeydown="key();">
+  <div id="selector">
+    
+  </div> <input type="button" value="+空のサブ木" onclick="addSubTree();"> <input type="button" value="現在のサブ木を削除" onclick="tryDeleteSubTree(true);"><br><br>
+  <div class="fbox">
   <div id="editor">
     
+  </div>
+  <div id="white">
+    
+  </div>
   </div>
   <br><br><br><br><br>
   <div class="fbox">
@@ -50,16 +84,23 @@
     <div class="howtouse">
       コマンド（CtrlはCommandで代用可）：
       <ul>
-        <li>Ctrl + ←↓↑→：移動（存在しなければ作成）</li>
+        <li>Ctrl + ←↓↑→：移動（要素がなければ作成）</li>
+        <li>Ctrl + Shift + ↓：要素を下に追加</li>
+        <li>Ctrl + Shift + ↑：要素をつぶす</li>
         <li>Ctrl + Delete：葉を削除（+Shift：枝を削除）</li>
-        <li>Ctrl + Q：枝のテキスト化（Enterで枝に戻す）</li>
+        <li>Ctrl + q：枝のテキスト化（Enterで枝に戻す）</li>
+        <li>Ctrl + @：枝のサブ木インポート化</li>
+        <li>Ctrl + $：サブ木インポートの枝化</li>
+        <li>Ctrl + Shift + z：undo</li>
+        <li>Ctrl + Shift + y：redo</li>
       </ul>
     </div>
     <div class="howtouse">
       特殊記法：
       <ul>
-        <li>_数字：LaTeX化時_{数字}に変換</li>
-        <li>#文字列：要素の右上に注釈(仮定解除とか)</li>
+        <li>（上端の行頭に）$サブ木名：サブ木をインポート<br>　（サブ木名"root"は予約名です）</li>
+        <li>（行内で）#文字列：要素上側の棒右端に注釈</li>
+        <li>（行内で）_数字：LaTeX化時_{数字}に変換</li>
       </ul>
     </div>
   </div>
@@ -71,14 +112,21 @@
     
   </div>
   <script>
-    const idPrefix = "node";
     const treekey = "tree";
     let str      = loadTreeFromBrowser();
+    let selector = document.getElementById("selector");
     let editor   = document.getElementById("editor");
+    let white    = document.getElementById("white");
     let realtext = document.getElementById("realtext");
     let latex    = document.getElementById("latex");
     let viewer   = document.getElementById("viewer");
     let _M = PS.Main;
+    let idPrefix = _M.idPrefix
+    let tree = _M.rootname;
+    let history = [];
+    let historypos = -1;
+
+    let shown = {};
     refresh();
     
     function saveTreeToBrowser(str){
@@ -100,11 +148,92 @@
       refresh();
     }
 
+    function undo(){
+      if(0<historypos){
+        historypos -= 1;
+        str = history[historypos];
+        refresh();
+      }
+    }
+
+    function redo(){
+      if(historypos<history.length-1){
+        historypos += 1;
+        str = history[historypos];
+        refresh();
+      }
+    }
 
     function refresh(){
-      editor.innerHTML = _M.strToHTML(str);
-      realtext.value   = _M.strToOriginal(str);
       saveTreeToBrowser(str);
+      if(history.length==0 || history[historypos]!=str){
+        history = history.slice(0,historypos+1);
+        history.push(str);
+        historypos += 1;
+      }
+      refreshSelectors();
+
+      Array.from(document.getElementsByClassName("treeswitch")).forEach(e=>{
+        shown[e.id] = e.checked;
+      });
+      editor.innerHTML = _M.strToHTML(str)(tree);
+      Array.from(document.getElementsByClassName("treeswitch")).forEach(e=>{
+        e.checked = shown[e.id];
+        e.onchange = refreshhr;
+      });
+
+      refreshhr();
+      realtext.value   = str //_M.strToOriginal(str);
+      white.width = editor.width/2;
+    }
+
+    function refreshhr(){
+      const margin = 0;
+      Array.from(document.getElementsByClassName("proofline")).forEach(e=>{
+        let box = e.parentElement;
+        let boxbb = e.parentElement.getBoundingClientRect();
+        //left and right parent
+        let lpbb  = box.firstElementChild.firstElementChild.lastElementChild.getBoundingClientRect();
+        let rpbb  = box.firstElementChild. lastElementChild.lastElementChild.getBoundingClientRect();
+        e.style.marginLeft = (lpbb.x - boxbb.x - margin)               + "px";
+        e.style.width      = (rpbb.x + rpbb.width - lpbb.x + margin*2) + "px";
+      });
+    }
+
+    function refreshSelectors(){
+      selector.innerHTML = "";
+      let trees = _M.getSubTrees(str);
+      if(trees.indexOf(tree) == -1){
+        tree = _M.rootname;
+      }
+      trees.forEach(t=>{
+        let i = document.createElement("input");
+        i.setAttribute("type","radio");
+        i.setAttribute("name",t);
+        i.setAttribute("id","subtree_"+t);
+        if(t == tree) i.setAttribute("checked",true);
+        i.onchange = (e=>{
+          if(e.target.checked){
+            tree = t;
+            refresh();
+          }
+        });
+
+        let l = document.createElement("label");
+        l.setAttribute("id","subtreename_"+t);
+        if(t != _M.rootname){
+          l.setAttribute("contenteditable", true);
+          l.classList.add("editable");
+          l.classList.add("subtreename");
+          l.onblur = ()=>{focusout();};
+          l.onkeydown  = ()=>{if(event.key == "Enter"){endInput(l)}};
+        }else{
+          l.setAttribute("for","subtree_"+t);
+        }
+        l.textContent = t;
+        selector.appendChild(i);
+        selector.appendChild(l);
+      });
     }
 
     function refreshLaTeX(){
@@ -112,24 +241,37 @@
       viewer.innerText = latex.value;
       if(typeof MathJax != "undefined") MathJax.typesetPromise().then(()=>null);
     }
-
+    let debug = false;
     function key(){
-      //console.log(event);
-      let ctrl = e.metaKey || event.ctrlKey;
+      if(debug) console.log(event);
+      let ctrl  = event.metaKey || event.ctrlKey;
+      let shift = event.shiftKey;
       if(event.key == "Enter"){
         endInput(event.target);
-      }else if(event.key == "ArrowRight" && ctrl){
+      }else if(event.key == "ArrowRight" && ctrl && !shift){
         moveRight(event.target);
-      }else if(event.key == "ArrowLeft"  && ctrl){
+      }else if(event.key == "ArrowLeft"  && ctrl && !shift){
         moveLeft(event.target);
-      }else if(event.key == "ArrowUp"    && ctrl){
+      }else if(event.key == "ArrowUp"    && ctrl && !shift){
         moveUp(event.target);
-      }else if(event.key == "ArrowDown"  && ctrl){
+      }else if(event.key == "ArrowDown"  && ctrl && !shift){
         moveDown(event.target);
-      }else if(event.key == "q"          && ctrl){
+      }else if(event.key == "ArrowUp"    && ctrl && shift){
+        trySquash(event.target);
+      }else if(event.key == "ArrowDown"  && ctrl && shift){
+        tryInsert(event.target);
+      }else if(event.key == "q"          && ctrl && !shift){
         openText(event.target);
+      }else if(event.key == "Z"          && ctrl){
+        undo();
+      }else if(event.key == "Y"          && ctrl){
+        redo();
+      }else if(event.key == "@"          && ctrl){
+        branchToSubTree(event.target);
+      }else if(event.key == "$"          && ctrl){
+        subTreeToBranch(event.target);
       }else if(event.key == "Delete"     && ctrl){
-        tryDelete(event.target, event.shiftKey);
+        tryDelete(event.target, shift);
       }else{
         return true;
       }
@@ -142,18 +284,43 @@
     }
 
     function toIdArr(str){
-      return str.slice(idPrefix.length).split("-").filter(x=>x!="").map(i=>parseInt(i));
+      let sections = str.split("_").slice(1);
+      return sections.map(s=>s.split("-")).map(a=>{return {root:a[0],id:a.slice(1).filter(x=>x!="").map(i=>parseInt(i))};});
     }
 
-    function fromIdArr(arr){
-      return idPrefix + arr.join("-");
+    function fromIdArr(arr, prefix=idPrefix){
+      return prefix + "_" + arr.map(e=>[e.root].concat(e.id).join("-")).join("_");
     }
+
+    function last(arr){
+      return arr[arr.length-1];
+    }
+
+    function modifyLast(_arr,f){
+      arr = Object.assign(_arr);
+      arr[arr.length-1] = f(arr[arr.length-1]);
+      return arr;
+    }
+
+    function modifyId(_arr,f){
+      arr = Object.assign(_arr);
+      arr[arr.length-1].id = f(arr[arr.length-1].id);
+      return arr;
+    }
+
 
     function endInput(elem){
       let _id = elem.id;
       if(_id.startsWith(idPrefix)){
-        let id = toIdArr(_id);
-        str = _M.tryrewriteTreeWithIndex(str)(id)(elem.innerText);
+        let ids = toIdArr(_id);
+        let {root,id} = last(ids);
+        str = _M.tryRewriteTreeWithIndex(str)(root)(id)(elem.innerText);
+      }else if(_id.startsWith("subtreename")){
+        let ids = toIdArr(_id);
+        let {root,id} = last(ids);
+        let newname = elem.textContent;
+        str = _M.tryRenameSubTree(str)(root)(newname);
+        if(tree == root) tree = newname;
       }
       refresh();
     }
@@ -162,13 +329,20 @@
       endInput(elem);
       let _id = elem.id;
       if(_id.startsWith(idPrefix)){
-        let id = toIdArr(_id);
-        if(_M.countChildren(str)(id) == 0){
-          str = _M.tryAddParentLeftWithIndex(str)(id);
-          refresh();
-          focusTo(id.concat(0));
+        let ids = toIdArr(_id);
+        let {root,id} = last(ids);
+        if(_M.countParents(str)(root)(id) == 0){
+          let ii = _M.isNodeImport(str)(root)(id);
+          if(ii.isImport){
+            document.getElementById(fromIdArr(ids, "show")).checked = true;
+            focusTo(ids.concat({root:ii.importOf, id:[]}));
+          }else{
+            str = _M.tryAddParentLeftWithIndex(str)(root)(id);
+            refresh();
+            focusTo(modifyId(ids, e=>e.concat(0)));
+          }
         }else{
-          focusTo(id.concat(0));
+          focusTo(modifyId(ids, e=>e.concat(0)));
         }
       }
     }
@@ -177,13 +351,18 @@
       endInput(elem);
       let _id = elem.id;
       if(_id.startsWith(idPrefix)){
-        let id = toIdArr(_id);
+        let ids = toIdArr(_id);
+        let {root,id} = last(ids);
         if(id.length==0){
-          str = _M.addChild(str);
-          refresh();
-          focusTo([]);
+          if(ids.length==0){
+            str = _M.addChild(str)(root);
+            refresh();
+            focusTo(modifyId(ids, e=>[]));
+          }else{
+            focusTo(ids.slice(0,-1));
+          }
         }else{
-          focusTo(id.slice(0,-1));
+          focusTo(modifyId(ids, e=>e.slice(0,-1)));
         }
       }
     }
@@ -192,21 +371,22 @@
       endInput(elem);
       let _id = elem.id;
       if(_id.startsWith(idPrefix)){
-        let id = toIdArr(_id);
+        let ids = toIdArr(_id);
+        let {root,id} = last(ids);
         if(id.length==0){
-          str = _M.addChild(str);
-          str = _M.tryAddParentLeftWithIndex(str)([]);
+          str = _M.addChild(str)(root);
+          str = _M.tryAddParentLeftWithIndex(str)(root)([]);
           refresh();
-          focusTo([0]);
+          focusTo(root,[0]);
         }else{
           let oldid = id[id.length-1];
           let pid   = id.slice(0,-1);
           if(oldid==0){
-            str = _M.tryAddParentLeftWithIndex(str)(pid);
+            str = _M.tryAddParentLeftWithIndex(str)(root)(pid);
             refresh();
-            focusTo(pid.concat(oldid));
-          }else{
-            focusTo(pid.concat(oldid-1));
+            focusTo(modifyId(ids, e=>pid.concat(oldid)));
+          }else{ 
+            focusTo(modifyId(ids, e=>pid.concat(oldid-1)));
           }
         }
       }
@@ -216,21 +396,22 @@
       endInput(elem);
       let _id = elem.id;
       if(_id.startsWith(idPrefix)){
-        let id = toIdArr(_id);
+        let ids = toIdArr(_id);
+        let {root,id} = last(ids);
         if(id.length==0){
           str = _M.addChild(str);
           str = _M.tryAddParentRightWithIndex(str)([]);
           refresh();
-          focusTo([1]);
+          focusTo(root,[1]);
         }else{
           let oldid = id[id.length-1];
           let pid   = id.slice(0,-1);
-          if(oldid== _M.countChildren(str)(pid)-1){
-            str = _M.tryAddParentRightWithIndex(str)(pid);
+          if(oldid== _M.countParents(str)(root)(pid)-1){
+            str = _M.tryAddParentRightWithIndex(str)(root)(pid);
             refresh();
-            focusTo(pid.concat(oldid+1));
+            focusTo(modifyId(ids, e=>pid.concat(oldid+1)));
           }else{
-            focusTo(pid.concat(oldid+1));
+            focusTo(modifyId(ids, e=>pid.concat(oldid+1)));
           }
         }
       }
@@ -240,37 +421,107 @@
       endInput(elem);
       let _id = elem.id;
       if(_id.startsWith(idPrefix)){
-        let id = toIdArr(_id);
-        let subtree = _M.subTreeToString(str)(id);
-        str = _M.tryRuinWithIndex(str)(id);
+        let ids = toIdArr(_id);
+        let {root,id} = last(ids);
+        let subtree = _M.branchToString(str)(root)(id);
+        str = _M.tryRuinWithIndex(str)(root)(id);
         refresh();
-        getNode(id).innerText = subtree;
-        focusTo(id);
+        getNode(ids).innerText = subtree;
+        focusTo(ids);
+      }
+    }
+
+    function branchToSubTree(elem){
+      endInput(elem);
+      let _id = elem.id;
+      if(_id.startsWith(idPrefix)){
+        let ids = toIdArr(_id);
+        let {root,id} = last(ids);
+        str = _M.tryMakeBranchSubTree(str)(root)(id);
+        refresh();
+        focusTo(ids);
+      }
+    }
+
+    function subTreeToBranch(elem){
+      endInput(elem);
+      let _id = elem.id;
+      if(_id.startsWith(idPrefix)){
+        let ids = toIdArr(_id);
+        let {root,id} = last(ids);
+        str = _M.tryInline(str)(root)(id);
+        refresh();
+        focusTo(ids);
       }
     }
 
     function tryDelete(elem,force){
       let _id = elem.id;
       if(_id.startsWith(idPrefix)){
-        let id = toIdArr(_id);
+        let ids = toIdArr(_id);
+        let {root,id} = last(ids);
         if(id.length==0){
         }else{
           endInput(elem);
           console.log(id);
           let pid   = id.slice(0,-1);
           let oldid = id[id.length-1];
-          let pcs   = _M.countChildren(str)(pid);
-          str = _M.tryDelWithIndex(str)(id)(force);
+          let pcs   = _M.countParents(str)(root)(pid);
+          str = _M.tryDelWithIndex(str)(root)(id)(force);
           refresh();
           if(pcs == 1){
-            focusTo(pid);
+            focusTo(modifyId(ids, e=>pid));
           }else if(oldid == 0){
-            focusTo(pid.concat(0));
+            focusTo(modifyId(ids, e=>pid.concat(0)));
           }else{
-            focusTo(pid.concat(oldid-1));
+            focusTo(modifyId(ids, e=>pid.concat(oldid-1)));
           }
         }
       }
+    }
+
+    function tryInsert(elem){
+      endInput(elem);
+      let _id = elem.id;
+      if(_id.startsWith(idPrefix)){
+        let ids = toIdArr(_id);
+        let {root,id} = last(ids);
+        str = _M.tryInsertWithIndex(str)(root)(id);
+        refresh();
+        focusTo(ids);
+      }
+    }
+
+    function trySquash(elem){
+      endInput(elem);
+      let _id = elem.id;
+      if(_id.startsWith(idPrefix)){
+        let ids = toIdArr(_id);
+        let {root,id} = last(ids);
+        if(_M.countParents(str)(root)(id) == 1){
+          str = _M.trySquashWithIndex(str)(root)(id);
+          refresh();
+          focusTo(ids);
+        }else{
+          focusTo(ids);
+        }
+      }
+    }
+
+    function addSubTree(){
+      str = _M.tryMakeEmptySubTree(str);
+      refresh();
+    }
+
+    function cleanSubTrees(){
+      str = _M.tryCleanSubTrees(str);
+      refresh();
+    }
+
+
+    function tryDeleteSubTree(force){
+      str = _M.tryDeleteSubTree(str)(tree)(force);
+      refresh();
     }
 
     function getNode(id){
