@@ -17,6 +17,7 @@
     .fbox{
       display: flex;
       align-items: flex-end;
+      width: max-content;
     }
     .howtouse{
       margin-left: 2em;
@@ -58,6 +59,9 @@
     }
     #selector{
       display: inline;
+    }
+    #white{
+      width: 50vw;
     }
   </style>
   <title>interactive proof tree editor</title>
@@ -184,7 +188,6 @@
 
       refreshhr();
       realtext.value   = str //_M.strToOriginal(str);
-      white.width = editor.width/2;
     }
 
     function refreshhr(){
