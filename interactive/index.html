@@ -198,8 +198,12 @@
         //left and right parent
         let lpbb  = box.firstElementChild.firstElementChild.lastElementChild.getBoundingClientRect();
         let rpbb  = box.firstElementChild. lastElementChild.lastElementChild.getBoundingClientRect();
-        e.style.marginLeft = (lpbb.x - boxbb.x - margin)               + "px";
-        e.style.width      = (rpbb.x + rpbb.width - lpbb.x + margin*2) + "px";
+        let cbb   = box.lastElementChild.getBoundingClientRect();
+
+        let lx = Math.min(lpbb.x, cbb.x) - boxbb.x - margin;
+        let rx = Math.max(rpbb.x + rpbb.width, cbb.x + cbb.width) - boxbb.x + margin;
+        e.style.marginLeft = (lx)+ "px";
+        e.style.width      = (rx - lx) + "px";
       });
     }
 
