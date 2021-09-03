@@ -464,7 +464,7 @@ subTreeToHTML :: Str -> (M.Map Str Tree) -> Str
 subTreeToHTML name dict = -- go tree "" Nil
   case M.lookup name dict of
     Nothing   -> "No such tree."
-    Just tree -> go (singleton name) tree "" Nil name
+    Just tree -> go (singleton name) tree "" Nil (escapeWith ruleIDChars $ name)
       where
         indentunit = "  " 
         go imported (Node body rule parents) indents ids log=
@@ -485,7 +485,7 @@ subTreeToHTML name dict = -- go tree "" Nil
                         ++! (idPrefix_check ++! "_" ++! log)
                         ++! "' class='treeswitch'>\n" ++!
                       indents ++! "<div class='parents imported'>\n" ++!
-                      go (i:imported) t (indents ++! indentunit) Nil (log ++! "_" ++! i) ++!
+                      go (i:imported) t (indents ++! indentunit) Nil (log ++! "_" ++! (escapeWith ruleIDChars $ i)) ++!
                       indents ++! "</div>\n"  ++!
                       indents ++! "<span type='checkbox'>\n" ++!
                       indents ++! "<label type='checkbox' for='" 
@@ -555,7 +555,7 @@ replaceForLaTeX = replaceUnderbarNumToBlaced <<< escapeWith ruleLaTeXChars
 escapeWith  :: M.Map CodePoint Str -> Str -> Str
 escapeWith rule str = 
     foldl (\s (Tuple from to)->
-                Stc.fromCodePointArray $ Stc.toCodePointArray s >>= (\c -> Stc.toCodePointArray (if c == from then to ++! " " else Stc.singleton c))
+                Stc.fromCodePointArray $ Stc.toCodePointArray s >>= (\c -> Stc.toCodePointArray (if c == from then to else Stc.singleton c))
             ) str (M.toUnfoldable rule :: List (Tuple CodePoint Str))
 
 replaceUnderbarNumToBlaced :: Str -> Str
@@ -582,6 +582,14 @@ frc = Stc.codePointFromChar
 fsc :: String -> Maybe CodePoint
 fsc = Stc.codePointAt 0
 
+ruleIDChars :: M.Map CodePoint Str
+ruleIDChars = 
+    M.fromFoldable $ [
+        Tuple (frc '\\') "\\\\",
+        Tuple (frc '-') "\\h",
+        Tuple (frc '_') "\\u"
+    ]
+
 ruleHTMLChars :: M.Map CodePoint Str
 ruleHTMLChars = 
     M.fromFoldable $ [
@@ -594,7 +602,7 @@ ruleHTMLChars =
 
 ruleLaTeXChars :: M.Map CodePoint Str
 ruleLaTeXChars =
-    M.fromFoldable $ [
+    map (_ ++! " ") $ M.fromFoldable $ [
         Tuple (frc '$') "\\$",
         Tuple (frc '∀') "\\forall",
         Tuple (frc '∈') "\\in",

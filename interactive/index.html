@@ -289,11 +289,19 @@
 
     function toIdArr(str){
       let sections = str.split("_").slice(1);
-      return sections.map(s=>s.split("-")).map(a=>{return {root:a[0],id:a.slice(1).filter(x=>x!="").map(i=>parseInt(i))};});
+      return sections.map(s=>s.split("-")).map(a=>{return {root:myUnescape(a[0]),id:a.slice(1).filter(x=>x!="").map(i=>parseInt(i))};});
     }
 
     function fromIdArr(arr, prefix=idPrefix){
-      return prefix + "_" + arr.map(e=>[e.root].concat(e.id).join("-")).join("_");
+      return prefix + "_" + arr.map(e=>[myEscape(e.root)].concat(e.id).join("-")).join("_");
+    }
+
+    function myEscape(str){
+      return str.replaceAll("\\","\\\\").replaceAll("_","\\u").replaceAll("-","\\h");
+    }
+
+    function myUnescape(str){
+      return str.replaceAll("\\u","_").replaceAll("\\h","-").replaceAll("\\\\","\\");
     }
 
     function last(arr){

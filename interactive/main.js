@@ -20135,8 +20135,8 @@ var PS = {};
                   return Data_List_Types.Nil.value;
               };
               if (v1 === 0 && v2 instanceof Data_List_Types.Cons) {
-                  var $85 = v(v2.value0);
-                  if ($85) {
+                  var $86 = v(v2.value0);
+                  if ($86) {
                       return v2.value1;
                   };
                   return new Data_List_Types.Cons(v2.value0, v2.value1);
@@ -20172,8 +20172,8 @@ var PS = {};
   };
   var ifEmpty = function (instead) {
       return function (str) {
-          var $92 = str === "";
-          if ($92) {
+          var $93 = str === "";
+          if ($93) {
               return instead;
           };
           return str;
@@ -20219,8 +20219,8 @@ var PS = {};
       return Data_Foldable.intercalate(Data_List_Types.foldableList)(Data_Monoid.monoidString)("\x0a")(Data_List.mapMaybe(function (k) {
           return Data_Functor.map(Data_Maybe.functorMaybe)(function (t) {
               return toOriginal(t) + (function () {
-                  var $106 = k === rootname;
-                  if ($106) {
+                  var $107 = k === rootname;
+                  if ($107) {
                       return "";
                   };
                   return "\x0a@" + (k + "\x0a\x0a");
@@ -20386,10 +20386,10 @@ var PS = {};
                       return done;
                   };
                   if (ml instanceof Data_Maybe.Just) {
-                      var $157 = Data_Eq.eq(Data_String_CodePoints.eqCodePoint)(ml.value0.head)(frc("_"));
-                      if ($157) {
-                          var $158 = Data_String_CodePoints.length(Data_String_CodePoints.takeWhile(Data_CodePoint_Unicode.isNumber)(ml.value0.tail)) > 0;
-                          if ($158) {
+                      var $158 = Data_Eq.eq(Data_String_CodePoints.eqCodePoint)(ml.value0.head)(frc("_"));
+                      if ($158) {
+                          var $159 = Data_String_CodePoints.length(Data_String_CodePoints.takeWhile(Data_CodePoint_Unicode.isNumber)(ml.value0.tail)) > 0;
+                          if ($159) {
                               $tco_var_s = Data_String_CodePoints.dropWhile(Data_CodePoint_Unicode.isNumber)(ml.value0.tail);
                               $copy_done = done + ("_{" + (Data_String_CodePoints.takeWhile(Data_CodePoint_Unicode.isNumber)(ml.value0.tail) + "}"));
                               return;
@@ -20413,11 +20413,14 @@ var PS = {};
       return go(str)("");
   };
   var ruleHTMLChars = Data_Map_Internal.fromFoldable(Data_String_CodePoints.ordCodePoint)(Data_Foldable.foldableArray)([ new Data_Tuple.Tuple(frc("&"), "&amp;"), new Data_Tuple.Tuple(frc("<"), "&lt;"), new Data_Tuple.Tuple(frc(">"), "&gt;"), new Data_Tuple.Tuple(frc("\""), "&quot;"), new Data_Tuple.Tuple(frc("'"), "&#39;") ]);
-  var ruleLaTeXChars = Data_Map_Internal.fromFoldable(Data_String_CodePoints.ordCodePoint)(Data_Foldable.foldableArray)(Data_Semigroup.append(Data_Semigroup.semigroupArray)([ new Data_Tuple.Tuple(frc("$"), "\\$"), new Data_Tuple.Tuple(frc("\u2200"), "\\forall"), new Data_Tuple.Tuple(frc("\u2208"), "\\in"), new Data_Tuple.Tuple(frc("\u251c"), "\\vdash"), new Data_Tuple.Tuple(frc("\u2248"), "\\approx"), new Data_Tuple.Tuple(frc("\u22a5"), "\\bot"), new Data_Tuple.Tuple(frc("\u2192"), "\\to"), new Data_Tuple.Tuple(frc("\xac"), "\\lnot"), new Data_Tuple.Tuple(frc("\u2227"), "\\land"), new Data_Tuple.Tuple(frc("\u2228"), "\\lor"), new Data_Tuple.Tuple(frc("\u03b1"), "\\alpha"), new Data_Tuple.Tuple(frc("\u03b2"), "\\beta"), new Data_Tuple.Tuple(frc("\u03b3"), "\\gamma"), new Data_Tuple.Tuple(frc("\u03b4"), "\\delta"), new Data_Tuple.Tuple(frc("\u03f5"), "\\epsilon"), new Data_Tuple.Tuple(frc("\u03b5"), "\\varepsilon"), new Data_Tuple.Tuple(frc("\u03b6"), "\\zeta"), new Data_Tuple.Tuple(frc("\u03b7"), "\\eta"), new Data_Tuple.Tuple(frc("\u03b8"), "\\theta"), new Data_Tuple.Tuple(frc("\u03d1"), "\\vartheta"), new Data_Tuple.Tuple(frc("\u03b9"), "\\iota"), new Data_Tuple.Tuple(frc("\u03ba"), "\\kappa"), new Data_Tuple.Tuple(frc("\u03bb"), "\\lambda"), new Data_Tuple.Tuple(frc("\u03bc"), "\\mu"), new Data_Tuple.Tuple(frc("\u03bd"), "\\nu"), new Data_Tuple.Tuple(frc("\u03be"), "\\xi"), new Data_Tuple.Tuple(frc("\u03c0"), "\\pi"), new Data_Tuple.Tuple(frc("\u03d6"), "\\varpi"), new Data_Tuple.Tuple(frc("\u03c1"), "\\rho"), new Data_Tuple.Tuple(frc("\u03f1"), "\\varrho"), new Data_Tuple.Tuple(frc("\u03c3"), "\\sigma"), new Data_Tuple.Tuple(frc("\u03c2"), "\\varsigma"), new Data_Tuple.Tuple(frc("\u03c4"), "\\tau"), new Data_Tuple.Tuple(frc("\u03c5"), "\\upsilon"), new Data_Tuple.Tuple(frc("\u03d5"), "\\phi"), new Data_Tuple.Tuple(frc("\u03c6"), "\\varphi"), new Data_Tuple.Tuple(frc("\u03c7"), "\\chi"), new Data_Tuple.Tuple(frc("\u03c8"), "\\psi"), new Data_Tuple.Tuple(frc("\u03c9"), "\\omega"), new Data_Tuple.Tuple(frc("\u0393"), "\\Gamma"), new Data_Tuple.Tuple(frc("\u039b"), "\\Lambda"), new Data_Tuple.Tuple(frc("\u03a3"), "\\Sigma"), new Data_Tuple.Tuple(frc("\u03a8"), "\\Psi"), new Data_Tuple.Tuple(frc("\u0394"), "\\Delta"), new Data_Tuple.Tuple(frc("\u039e"), "\\Xi"), new Data_Tuple.Tuple(frc("\u03a5"), "\\Upsilon"), new Data_Tuple.Tuple(frc("\u03a9"), "\\Omega"), new Data_Tuple.Tuple(frc("\u0398"), "\\Theta"), new Data_Tuple.Tuple(frc("\u03a0"), "\\Pi"), new Data_Tuple.Tuple(frc("\u03a6"), "\\Phi") ])(Data_Array.mapMaybe(function (v) {
+  var ruleIDChars = Data_Map_Internal.fromFoldable(Data_String_CodePoints.ordCodePoint)(Data_Foldable.foldableArray)([ new Data_Tuple.Tuple(frc("\\"), "\\\\"), new Data_Tuple.Tuple(frc("-"), "\\h"), new Data_Tuple.Tuple(frc("_"), "\\u") ]);
+  var ruleLaTeXChars = Data_Functor.map(Data_Map_Internal.functorMap)(function (v) {
+      return v + " ";
+  })(Data_Map_Internal.fromFoldable(Data_String_CodePoints.ordCodePoint)(Data_Foldable.foldableArray)(Data_Semigroup.append(Data_Semigroup.semigroupArray)([ new Data_Tuple.Tuple(frc("$"), "\\$"), new Data_Tuple.Tuple(frc("\u2200"), "\\forall"), new Data_Tuple.Tuple(frc("\u2208"), "\\in"), new Data_Tuple.Tuple(frc("\u251c"), "\\vdash"), new Data_Tuple.Tuple(frc("\u2248"), "\\approx"), new Data_Tuple.Tuple(frc("\u22a5"), "\\bot"), new Data_Tuple.Tuple(frc("\u2192"), "\\to"), new Data_Tuple.Tuple(frc("\xac"), "\\lnot"), new Data_Tuple.Tuple(frc("\u2227"), "\\land"), new Data_Tuple.Tuple(frc("\u2228"), "\\lor"), new Data_Tuple.Tuple(frc("\u03b1"), "\\alpha"), new Data_Tuple.Tuple(frc("\u03b2"), "\\beta"), new Data_Tuple.Tuple(frc("\u03b3"), "\\gamma"), new Data_Tuple.Tuple(frc("\u03b4"), "\\delta"), new Data_Tuple.Tuple(frc("\u03f5"), "\\epsilon"), new Data_Tuple.Tuple(frc("\u03b5"), "\\varepsilon"), new Data_Tuple.Tuple(frc("\u03b6"), "\\zeta"), new Data_Tuple.Tuple(frc("\u03b7"), "\\eta"), new Data_Tuple.Tuple(frc("\u03b8"), "\\theta"), new Data_Tuple.Tuple(frc("\u03d1"), "\\vartheta"), new Data_Tuple.Tuple(frc("\u03b9"), "\\iota"), new Data_Tuple.Tuple(frc("\u03ba"), "\\kappa"), new Data_Tuple.Tuple(frc("\u03bb"), "\\lambda"), new Data_Tuple.Tuple(frc("\u03bc"), "\\mu"), new Data_Tuple.Tuple(frc("\u03bd"), "\\nu"), new Data_Tuple.Tuple(frc("\u03be"), "\\xi"), new Data_Tuple.Tuple(frc("\u03c0"), "\\pi"), new Data_Tuple.Tuple(frc("\u03d6"), "\\varpi"), new Data_Tuple.Tuple(frc("\u03c1"), "\\rho"), new Data_Tuple.Tuple(frc("\u03f1"), "\\varrho"), new Data_Tuple.Tuple(frc("\u03c3"), "\\sigma"), new Data_Tuple.Tuple(frc("\u03c2"), "\\varsigma"), new Data_Tuple.Tuple(frc("\u03c4"), "\\tau"), new Data_Tuple.Tuple(frc("\u03c5"), "\\upsilon"), new Data_Tuple.Tuple(frc("\u03d5"), "\\phi"), new Data_Tuple.Tuple(frc("\u03c6"), "\\varphi"), new Data_Tuple.Tuple(frc("\u03c7"), "\\chi"), new Data_Tuple.Tuple(frc("\u03c8"), "\\psi"), new Data_Tuple.Tuple(frc("\u03c9"), "\\omega"), new Data_Tuple.Tuple(frc("\u0393"), "\\Gamma"), new Data_Tuple.Tuple(frc("\u039b"), "\\Lambda"), new Data_Tuple.Tuple(frc("\u03a3"), "\\Sigma"), new Data_Tuple.Tuple(frc("\u03a8"), "\\Psi"), new Data_Tuple.Tuple(frc("\u0394"), "\\Delta"), new Data_Tuple.Tuple(frc("\u039e"), "\\Xi"), new Data_Tuple.Tuple(frc("\u03a5"), "\\Upsilon"), new Data_Tuple.Tuple(frc("\u03a9"), "\\Omega"), new Data_Tuple.Tuple(frc("\u0398"), "\\Theta"), new Data_Tuple.Tuple(frc("\u03a0"), "\\Pi"), new Data_Tuple.Tuple(frc("\u03a6"), "\\Phi") ])(Data_Array.mapMaybe(function (v) {
       return Data_Functor.map(Data_Maybe.functorMaybe)(function (a) {
           return new Data_Tuple.Tuple(a, v.value1);
       })(v.value0);
-  })([ new Data_Tuple.Tuple(fsc("\ud835\udcab"), "\\mathcal{P}") ])));
+  })([ new Data_Tuple.Tuple(fsc("\ud835\udcab"), "\\mathcal{P}") ]))));
   var splitLineOnSharp = function (str) {
       var rule$prime = Data_String_CodePoints.dropWhile(function (v) {
           return Data_Eq.notEq(Data_String_CodePoints.eqCodePoint)(v)(frc("#"));
@@ -20561,8 +20564,8 @@ var PS = {};
                       return new Data_Either.Left(v.value0);
                   };
                   if (v instanceof Data_Either.Right && v.value0.value1 instanceof SubRoot) {
-                      var $208 = Data_Map_Internal.member(Data_Ord.ordString)(v.value0.value1.value0)(trees) || v.value0.value1.value0 === rootname;
-                      if ($208) {
+                      var $209 = Data_Map_Internal.member(Data_Ord.ordString)(v.value0.value1.value0)(trees) || v.value0.value1.value0 === rootname;
+                      if ($209) {
                           $tco_done = true;
                           return new Data_Either.Left(new MultiDef(v.value0.value1.value0));
                       };
@@ -20625,9 +20628,9 @@ var PS = {};
               return function (v) {
                   return Data_String_CodePoints.fromCodePointArray(Control_Bind.bind(Control_Bind.bindArray)(Data_String_CodePoints.toCodePointArray(s))(function (c) {
                       return Data_String_CodePoints.toCodePointArray((function () {
-                          var $228 = Data_Eq.eq(Data_String_CodePoints.eqCodePoint)(c)(v.value0);
-                          if ($228) {
-                              return v.value1 + " ";
+                          var $229 = Data_Eq.eq(Data_String_CodePoints.eqCodePoint)(c)(v.value0);
+                          if ($229) {
+                              return v.value1;
                           };
                           return Data_String_CodePoints.singleton(c);
                       })());
@@ -20637,9 +20640,9 @@ var PS = {};
       };
   };
   var replaceForLaTeX = (function () {
-      var $429 = escapeWith(ruleLaTeXChars);
-      return function ($430) {
-          return replaceUnderbarNumToBlaced($429($430));
+      var $430 = escapeWith(ruleLaTeXChars);
+      return function ($431) {
+          return replaceUnderbarNumToBlaced($430($431));
       };
   })();
   var toLaTeX = function (dict) {
@@ -20652,8 +20655,8 @@ var PS = {};
               return function (v1) {
                   var v2 = isImport(v1.value0);
                   if (v2 instanceof Data_Maybe.Just) {
-                      var $235 = Data_Foldable.elem(Data_List_Types.foldableList)(Data_Eq.eqString)(v2.value0)(imported);
-                      if ($235) {
+                      var $236 = Data_Foldable.elem(Data_List_Types.foldableList)(Data_Eq.eqString)(v2.value0)(imported);
+                      if ($236) {
                           return Data_List.singleton("circular reference of " + v2.value0);
                       };
                       var v3 = Data_Map_Internal.lookup(Data_Ord.ordString)(v2.value0)(dict);
@@ -20716,8 +20719,8 @@ var PS = {};
                               return function (log) {
                                   var v2 = isImport(v1.value0);
                                   if (v2 instanceof Data_Maybe.Just) {
-                                      var $253 = Data_Foldable.elem(Data_List_Types.foldableList)(Data_Eq.eqString)(v2.value0)(imported);
-                                      if ($253) {
+                                      var $254 = Data_Foldable.elem(Data_List_Types.foldableList)(Data_Eq.eqString)(v2.value0)(imported);
+                                      if ($254) {
                                           return "circular reference of " + v2.value0;
                                       };
                                       return indents + ("<div class='branch'>\x0a" + ((function () {
@@ -20729,7 +20732,7 @@ var PS = {};
                                               })) + "</span>\x0a")))))));
                                           };
                                           if (v3 instanceof Data_Maybe.Just) {
-                                              return indents + ("<input type='checkbox' id='" + (idPrefix_check + ("_" + log) + ("' class='treeswitch'>\x0a" + (indents + ("<div class='parents imported'>\x0a" + (go(new Data_List_Types.Cons(v2.value0, imported))(v3.value0)(indents + "  ")(Data_List_Types.Nil.value)(log + ("_" + v2.value0)) + (indents + ("</div>\x0a" + (indents + ("<span type='checkbox'>\x0a" + (indents + ("<label type='checkbox' for='" + (idPrefix_check + ("_" + log) + ("' class='switchlabel'>\u2191</label>\x0a" + (indents + ("<span class='omitted'>\x0a" + ("(" + (escapeWith(ruleHTMLChars)((function (v4) {
+                                              return indents + ("<input type='checkbox' id='" + (idPrefix_check + ("_" + log) + ("' class='treeswitch'>\x0a" + (indents + ("<div class='parents imported'>\x0a" + (go(new Data_List_Types.Cons(v2.value0, imported))(v3.value0)(indents + "  ")(Data_List_Types.Nil.value)(log + ("_" + escapeWith(ruleIDChars)(v2.value0))) + (indents + ("</div>\x0a" + (indents + ("<span type='checkbox'>\x0a" + (indents + ("<label type='checkbox' for='" + (idPrefix_check + ("_" + log) + ("' class='switchlabel'>\u2191</label>\x0a" + (indents + ("<span class='omitted'>\x0a" + ("(" + (escapeWith(ruleHTMLChars)((function (v4) {
                                                   return v4.value0;
                                               })(v3.value0)) + (")" + (indents + ("</span>\x0a" + (indents + ("<span class='node editable' contenteditable='true' id='" + (idPrefix + ("_" + log) + ("' onkeydown='key();' onfocusout='focusout();' >" + (escapeWith(ruleHTMLChars)(unsplitLineOnSharp({
                                                   body: v1.value0,
@@ -20741,8 +20744,8 @@ var PS = {};
                                   };
                                   if (v2 instanceof Data_Maybe.Nothing) {
                                       return indents + ("<div class='branch'>\x0a" + ((function () {
-                                          var $261 = Data_List.length(v1.value2) > 0;
-                                          if ($261) {
+                                          var $262 = Data_List.length(v1.value2) > 0;
+                                          if ($262) {
                                               return indents + ("<div class='parents'>\x0a" + (Data_Foldable.intercalate(Data_List_Types.foldableList)(Data_Monoid.monoidString)("\x0a")(Data_Functor.map(Data_List_Types.functorList)(function (v3) {
                                                   return go(imported)(v3.value0)(indents + "  ")(new Data_List_Types.Cons(v3.value1, ids))(log + ("-" + Data_Show.show(Data_Show.showInt)(v3.value1)));
                                               })(Data_List.zip(v1.value2)(Data_List.range(0)(Data_List.length(v1.value2))))) + (indents + ("</div>\x0a" + (indents + "<hr class='proofline'>\x0a")))));
@@ -20759,7 +20762,7 @@ var PS = {};
                       };
                   };
               };
-              return go(Data_List.singleton(name))(v.value0)("")(Data_List_Types.Nil.value)(name);
+              return go(Data_List.singleton(name))(v.value0)("")(Data_List_Types.Nil.value)(escapeWith(ruleIDChars)(name));
           };
           throw new Error("Failed pattern match at Main (line 465, column 3 - line 515, column 37): " + [ v.constructor.name ]);
       };
@@ -20781,9 +20784,9 @@ var PS = {};
   };
   var getSubTrees = function (s) {
       return Data_Either.either(Data_Function["const"]([  ]))((function () {
-          var $431 = Data_Array.fromFoldable(Data_List_Types.foldableList);
-          return function ($432) {
-              return $431(getTreesName_rootFirst($432));
+          var $432 = Data_Array.fromFoldable(Data_List_Types.foldableList);
+          return function ($433) {
+              return $432(getTreesName_rootFirst($433));
           };
       })())(parseFromStrToTrees(s));
   };
@@ -20855,8 +20858,8 @@ var PS = {};
                           if (v instanceof Data_List_Types.Nil) {
                               var sp = splitLineOnSharp(v1);
                               var $$default = new Node(sp.body, sp.rule, v2.value2);
-                              var $300 = Data_List["null"](v2.value2) && Data_String_CodeUnits.contains("\x0a")(v1);
-                              if ($300) {
+                              var $301 = Data_List["null"](v2.value2) && Data_String_CodeUnits.contains("\x0a")(v1);
+                              if ($301) {
                                   var v3 = parseFromStrToTree(v1);
                                   if (v3 instanceof Data_Either.Right && (v3.value0.value1 instanceof EOT && v3.value0.value2 instanceof Data_List_Types.Nil)) {
                                       return v3.value0.value0;
@@ -20920,8 +20923,8 @@ var PS = {};
               var $tco_done = false;
               var $tco_result;
               function $tco_loop(i) {
-                  var $324 = Data_Map_Internal.member(Data_Ord.ordString)(name(i))(dict);
-                  if ($324) {
+                  var $325 = Data_Map_Internal.member(Data_Ord.ordString)(name(i))(dict);
+                  if ($325) {
                       $copy_i = i + 1 | 0;
                       return;
                   };
@@ -20937,9 +20940,9 @@ var PS = {};
       };
   };
   var _tryMakeEmptySubTree = (function () {
-      var $433 = _tryMakeNewSubTree(new Node("", Data_Maybe.Nothing.value, Data_List_Types.Nil.value));
-      return function ($434) {
-          return Data_Tuple.snd($433($434));
+      var $434 = _tryMakeNewSubTree(new Node("", Data_Maybe.Nothing.value, Data_List_Types.Nil.value));
+      return function ($435) {
+          return Data_Tuple.snd($434($435));
       };
   })();
   var tryMakeEmptySubTree = function (str) {
@@ -21023,8 +21026,8 @@ var PS = {};
   var _tryDeleteSubTree = function (force) {
       return function (name) {
           return function (dict) {
-              var $343 = name === rootname;
-              if ($343) {
+              var $344 = name === rootname;
+              if ($344) {
                   return dict;
               };
               var v = Data_Map_Internal.lookup(Data_Ord.ordString)(name)(dict);
@@ -21098,8 +21101,8 @@ var PS = {};
   var _tryRenameSubTree = function (from) {
       return function (to) {
           return function (dict) {
-              var $374 = from === rootname;
-              if ($374) {
+              var $375 = from === rootname;
+              if ($375) {
                   return dict;
               };
               var v = Data_Map_Internal.lookup(Data_Ord.ordString)(from)(dict);
@@ -21113,8 +21116,8 @@ var PS = {};
                   };
                   if (v1 instanceof Data_Maybe.Nothing) {
                       return _tryApplyToAllTrees(function (b) {
-                          var $378 = Data_Eq.eq(Data_Maybe.eqMaybe(Data_Eq.eqString))(isImport(b))(new Data_Maybe.Just(from));
-                          if ($378) {
+                          var $379 = Data_Eq.eq(Data_Maybe.eqMaybe(Data_Eq.eqString))(isImport(b))(new Data_Maybe.Just(from));
+                          if ($379) {
                               return "$" + to;
                           };
                           return b;
@@ -21388,6 +21391,7 @@ var PS = {};
   exports["replaceUnderbarNumToBlaced"] = replaceUnderbarNumToBlaced;
   exports["frc"] = frc;
   exports["fsc"] = fsc;
+  exports["ruleIDChars"] = ruleIDChars;
   exports["ruleHTMLChars"] = ruleHTMLChars;
   exports["ruleLaTeXChars"] = ruleLaTeXChars;
   exports["genericTree"] = genericTree;
