@@ -454,6 +454,9 @@ toLaTeX dict =
 idPrefix :: Str
 idPrefix = "node"
 
+idPrefix_label :: Str
+idPrefix_label = "rightlabel"
+
 idPrefix_import :: Str
 idPrefix_import = "import"
 
@@ -475,28 +478,34 @@ subTreeToHTML name dict = -- go tree "" Nil
               else
                 indents ++! "<div class='branch'>\n"  ++!(
                   case M.lookup i dict of
-                    Nothing -> "[tree not found: " ++! i ++! "]<br>" ++!
+                    Nothing -> "[tree not found: " ++! escapeWith ruleHTMLChars i ++! "]<br>" ++!
                       indents ++! "<span class='node editable' contenteditable='true' id='" 
                         ++! (idPrefix ++! "_" ++! log)
-                        ++! "' onkeydown='key();' onfocusout='focusout();' >"  ++! (escapeWith ruleHTMLChars $ unsplitLineOnSharp {body:body,rule:rule}) ++! "</span>\n"
+                        ++! "' onkeydown='key();' onfocusout='focusout();' >"  ++! (escapeWith ruleHTMLChars $ unsplitLineOnSharp {body:body,rule:rule}) ++! "</span>\n" ++!
+                      indents ++! "<span class='rightlabel editable' contenteditable='true' id='" 
+                        ++! (idPrefix_label  ++! "_" ++! log)
+                        ++! "' onkeydown='key();' onfocusout='focusout();' >"  ++!  "</span>\n"
 
                     Just t  -> 
                       indents ++! "<input type='checkbox' id='" 
                         ++! (idPrefix_check ++! "_" ++! log)
                         ++! "' class='treeswitch'>\n" ++!
                       indents ++! "<div class='parents imported'>\n" ++!
-                      go (i:imported) t (indents ++! indentunit) Nil (log ++! "_" ++! (escapeWith ruleIDChars $ i)) ++!
+                      go (i:imported) t (indents ++! indentunit) Nil (log ++! "_" ++! escapeWith ruleIDChars i) ++!
                       indents ++! "</div>\n"  ++!
+                      indents ++! "<span class='node editable' contenteditable='true' id='" 
+                        ++! (idPrefix ++! "_" ++! log)
+                        ++! "' onkeydown='key();' onfocusout='focusout();' >"  ++! (escapeWith ruleHTMLChars $ unsplitLineOnSharp {body:body,rule:rule}) ++! "</span>\n" ++!
+                      indents ++! "<span class='rightlabel editable' contenteditable='true' id='" 
+                        ++! (idPrefix_label  ++! "_" ++! log)
+                        ++! "' onkeydown='key();' onfocusout='focusout();' >"  ++!  "</span>\n" ++!
                       indents ++! "<span type='checkbox'>\n" ++!
                       indents ++! "<label type='checkbox' for='" 
                         ++! (idPrefix_check ++! "_" ++! log)
                         ++! "' class='switchlabel'>↑</label>\n" ++!
-                      indents ++! "<span class='omitted'>\n" ++!
-                      "(" ++! escapeWith ruleHTMLChars ((\(Node b _ _) -> b) t) ++! ")" ++!
-                      indents ++! "</span>\n"++!
-                      indents ++! "<span class='node editable' contenteditable='true' id='" 
-                        ++! (idPrefix ++! "_" ++! log)
-                        ++! "' onkeydown='key();' onfocusout='focusout();' >"  ++! (escapeWith ruleHTMLChars $ unsplitLineOnSharp {body:body,rule:rule}) ++! "</span>\n" ++!
+                      indents ++! "<div class='omitted'>\n" ++!
+                      escapeWith ruleHTMLChars ((\(Node b _ _) -> b) t) ++!
+                      indents ++! "</div>\n"++!
                       indents ++! "</span>\n"
                 ) ++!
                 indents ++! "</div>\n"
@@ -509,9 +518,12 @@ subTreeToHTML name dict = -- go tree "" Nil
                 indents ++! "</div>\n"  ++!
                 indents ++! "<hr class='proofline'>\n"  
               else "") ++!
+              indents ++! "<span class='rightlabel editable' contenteditable='true' id='" 
+                ++! (idPrefix_label  ++! "_" ++! log)
+                ++! "' onkeydown='key();' onfocusout='focusout();' >"  ++! (escapeWith ruleHTMLChars $ fromMaybe "" rule) ++! "</span>\n" ++!
               indents ++! "<span class='node editable' contenteditable='true' id='" 
                 ++! (idPrefix  ++! "_" ++! log)
-                ++! "' onkeydown='key();' onfocusout='focusout();' >"  ++! (escapeWith ruleHTMLChars $ unsplitLineOnSharp {body:body,rule:rule}) ++! "</span>\n" ++!
+                ++! "' onkeydown='key();' onfocusout='focusout();'>"  ++! (escapeWith ruleHTMLChars $ body) ++! "</span>\n" ++!
               indents ++! "</div>\n"
 
 ifEmpty :: Str -> Str -> Str

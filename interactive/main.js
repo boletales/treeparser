@@ -20207,6 +20207,7 @@ var PS = {};
   var showTree = {
       show: toOriginal
   };
+  var idPrefix_label = "rightlabel";
   var idPrefix_import = "import";
   var idPrefix_check = "show";
   var idPrefix = "node";
@@ -20402,7 +20403,7 @@ var PS = {};
                       $copy_done = done + Data_String_CodePoints.singleton(ml.value0.head);
                       return;
                   };
-                  throw new Error("Failed pattern match at Main (line 566, column 11 - line 575, column 58): " + [ ml.constructor.name ]);
+                  throw new Error("Failed pattern match at Main (line 578, column 11 - line 587, column 58): " + [ ml.constructor.name ]);
               };
               while (!$tco_done) {
                   $tco_result = $tco_loop($tco_var_s, $copy_done);
@@ -20726,20 +20727,20 @@ var PS = {};
                                       return indents + ("<div class='branch'>\x0a" + ((function () {
                                           var v3 = Data_Map_Internal.lookup(Data_Ord.ordString)(v2.value0)(dict);
                                           if (v3 instanceof Data_Maybe.Nothing) {
-                                              return "[tree not found: " + (v2.value0 + ("]<br>" + (indents + ("<span class='node editable' contenteditable='true' id='" + (idPrefix + ("_" + log) + ("' onkeydown='key();' onfocusout='focusout();' >" + (escapeWith(ruleHTMLChars)(unsplitLineOnSharp({
+                                              return "[tree not found: " + (escapeWith(ruleHTMLChars)(v2.value0) + ("]<br>" + (indents + ("<span class='node editable' contenteditable='true' id='" + (idPrefix + ("_" + log) + ("' onkeydown='key();' onfocusout='focusout();' >" + (escapeWith(ruleHTMLChars)(unsplitLineOnSharp({
                                                   body: v1.value0,
                                                   rule: v1.value1
-                                              })) + "</span>\x0a")))))));
+                                              })) + ("</span>\x0a" + (indents + ("<span class='rightlabel editable' contenteditable='true' id='" + (idPrefix_label + ("_" + log) + ("' onkeydown='key();' onfocusout='focusout();' >" + "</span>\x0a"))))))))))));
                                           };
                                           if (v3 instanceof Data_Maybe.Just) {
-                                              return indents + ("<input type='checkbox' id='" + (idPrefix_check + ("_" + log) + ("' class='treeswitch'>\x0a" + (indents + ("<div class='parents imported'>\x0a" + (go(new Data_List_Types.Cons(v2.value0, imported))(v3.value0)(indents + "  ")(Data_List_Types.Nil.value)(log + ("_" + escapeWith(ruleIDChars)(v2.value0))) + (indents + ("</div>\x0a" + (indents + ("<span type='checkbox'>\x0a" + (indents + ("<label type='checkbox' for='" + (idPrefix_check + ("_" + log) + ("' class='switchlabel'>\u2191</label>\x0a" + (indents + ("<span class='omitted'>\x0a" + ("(" + (escapeWith(ruleHTMLChars)((function (v4) {
-                                                  return v4.value0;
-                                              })(v3.value0)) + (")" + (indents + ("</span>\x0a" + (indents + ("<span class='node editable' contenteditable='true' id='" + (idPrefix + ("_" + log) + ("' onkeydown='key();' onfocusout='focusout();' >" + (escapeWith(ruleHTMLChars)(unsplitLineOnSharp({
+                                              return indents + ("<input type='checkbox' id='" + (idPrefix_check + ("_" + log) + ("' class='treeswitch'>\x0a" + (indents + ("<div class='parents imported'>\x0a" + (go(new Data_List_Types.Cons(v2.value0, imported))(v3.value0)(indents + "  ")(Data_List_Types.Nil.value)(log + ("_" + escapeWith(ruleIDChars)(v2.value0))) + (indents + ("</div>\x0a" + (indents + ("<span class='node editable' contenteditable='true' id='" + (idPrefix + ("_" + log) + ("' onkeydown='key();' onfocusout='focusout();' >" + (escapeWith(ruleHTMLChars)(unsplitLineOnSharp({
                                                   body: v1.value0,
                                                   rule: v1.value1
-                                              })) + ("</span>\x0a" + (indents + "</span>\x0a"))))))))))))))))))))))))))));
+                                              })) + ("</span>\x0a" + (indents + ("<span class='rightlabel editable' contenteditable='true' id='" + (idPrefix_label + ("_" + log) + ("' onkeydown='key();' onfocusout='focusout();' >" + ("</span>\x0a" + (indents + ("<span type='checkbox'>\x0a" + (indents + ("<label type='checkbox' for='" + (idPrefix_check + ("_" + log) + ("' class='switchlabel'>\u2191</label>\x0a" + (indents + ("<div class='omitted'>\x0a" + (escapeWith(ruleHTMLChars)((function (v4) {
+                                                  return v4.value0;
+                                              })(v3.value0)) + (indents + ("</div>\x0a" + (indents + "</span>\x0a")))))))))))))))))))))))))))))));
                                           };
-                                          throw new Error("Failed pattern match at Main (line 477, column 19 - line 500, column 46): " + [ v3.constructor.name ]);
+                                          throw new Error("Failed pattern match at Main (line 480, column 19 - line 509, column 46): " + [ v3.constructor.name ]);
                                       })() + (indents + "</div>\x0a")));
                                   };
                                   if (v2 instanceof Data_Maybe.Nothing) {
@@ -20751,12 +20752,9 @@ var PS = {};
                                               })(Data_List.zip(v1.value2)(Data_List.range(0)(Data_List.length(v1.value2))))) + (indents + ("</div>\x0a" + (indents + "<hr class='proofline'>\x0a")))));
                                           };
                                           return "";
-                                      })() + (indents + ("<span class='node editable' contenteditable='true' id='" + (idPrefix + ("_" + log) + ("' onkeydown='key();' onfocusout='focusout();' >" + (escapeWith(ruleHTMLChars)(unsplitLineOnSharp({
-                                          body: v1.value0,
-                                          rule: v1.value1
-                                      })) + ("</span>\x0a" + (indents + "</div>\x0a")))))))));
+                                      })() + (indents + ("<span class='rightlabel editable' contenteditable='true' id='" + (idPrefix_label + ("_" + log) + ("' onkeydown='key();' onfocusout='focusout();' >" + (escapeWith(ruleHTMLChars)(Data_Maybe.fromMaybe("")(v1.value1)) + ("</span>\x0a" + (indents + ("<span class='node editable' contenteditable='true' id='" + (idPrefix + ("_" + log) + ("' onkeydown='key();' onfocusout='focusout();'>" + (escapeWith(ruleHTMLChars)(v1.value0) + ("</span>\x0a" + (indents + "</div>\x0a")))))))))))))));
                                   };
-                                  throw new Error("Failed pattern match at Main (line 471, column 11 - line 515, column 37): " + [ v2.constructor.name ]);
+                                  throw new Error("Failed pattern match at Main (line 474, column 11 - line 527, column 37): " + [ v2.constructor.name ]);
                               };
                           };
                       };
@@ -20764,7 +20762,7 @@ var PS = {};
               };
               return go(Data_List.singleton(name))(v.value0)("")(Data_List_Types.Nil.value)(escapeWith(ruleIDChars)(name));
           };
-          throw new Error("Failed pattern match at Main (line 465, column 3 - line 515, column 37): " + [ v.constructor.name ]);
+          throw new Error("Failed pattern match at Main (line 468, column 3 - line 527, column 37): " + [ v.constructor.name ]);
       };
   };
   var strToHTML = function (s) {
@@ -21377,6 +21375,7 @@ var PS = {};
   exports["strToOriginal"] = strToOriginal;
   exports["toLaTeX"] = toLaTeX;
   exports["idPrefix"] = idPrefix;
+  exports["idPrefix_label"] = idPrefix_label;
   exports["idPrefix_import"] = idPrefix_import;
   exports["idPrefix_check"] = idPrefix_check;
   exports["subTreeToHTML"] = subTreeToHTML;

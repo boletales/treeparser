@@ -13,6 +13,7 @@
     .parents {
       display: flex;
       align-items: flex-end;
+      justify-content: space-between;
     }
     .fbox{
       display: flex;
@@ -27,6 +28,7 @@
       margin-right: 0.2em;
       margin-left: 0.2em;
       text-align: center;
+      position: relative;
     }
     .editable{
       background-color: #eee;
@@ -43,10 +45,10 @@
       width: max-content;
     }
     .omitted{
-      color: #888;
+      color: #00a;
     }
     :checked ~ * > .omitted{
-      display: none;
+      margin-left : 1px;
     }
     .treeswitch{
       display: none;
@@ -56,6 +58,10 @@
     }
     :checked ~ * > .switchlabel{
       color: blue;
+    }
+    .rightlabel{
+      font-size: small;
+      position: absolute;
     }
     #selector{
       display: inline;
@@ -183,7 +189,7 @@
       editor.innerHTML = _M.strToHTML(str)(tree);
       Array.from(document.getElementsByClassName("treeswitch")).forEach(e=>{
         e.checked = shown[e.id];
-        e.onchange = refreshhr;
+        e.onchange = ()=>{refreshhr();};
       });
 
       refreshhr();
@@ -191,7 +197,11 @@
     }
 
     function refreshhr(){
-      const margin = 0;
+      //let a = document.body.offsetHeight;
+      //editor.style.display = "none";
+      //editor.style.display = "block";
+
+      const margin_hr = 0;
       Array.from(document.getElementsByClassName("proofline")).forEach(e=>{
         let box = e.parentElement;
         let boxbb = e.parentElement.getBoundingClientRect();
@@ -200,10 +210,26 @@
         let rpbb  = box.firstElementChild. lastElementChild.lastElementChild.getBoundingClientRect();
         let cbb   = box.lastElementChild.getBoundingClientRect();
 
-        let lx = Math.min(lpbb.x, cbb.x) - boxbb.x - margin;
-        let rx = Math.max(rpbb.x + rpbb.width, cbb.x + cbb.width) - boxbb.x + margin;
+        let lx = Math.min(lpbb.x, cbb.x) - boxbb.x - margin_hr;
+        let rx = Math.max(rpbb.x + rpbb.width) - boxbb.x + margin_hr;
         e.style.marginLeft = (lx)+ "px";
-        e.style.width      = (rx - lx) + "px";
+        e.style.width      = Math.max(rx - lx,cbb.width) + "px";
+      });
+
+      const margin_label = 2;
+      Array.from(document.getElementsByClassName("rightlabel")).forEach(e=>{
+        if(e.textContent == "") e.style.display = "none";
+        let box = e.parentElement;
+        let boxbb = e.parentElement.getBoundingClientRect();
+        let ls = box.getElementsByClassName("proofline");
+        if(ls.length >0){
+          let line = last(ls);
+          let linebb  = line.getBoundingClientRect();
+          e.style.left = (linebb.x - boxbb.x + linebb.width + margin_label)+ "px";
+          e.style.top  = (linebb.y - boxbb.y - e.clientHeight/2)+ "px";
+          let ebb = e.getBoundingClientRect();
+          box.style.marginRight = ebb.width + "px";
+        }
       });
     }
 
@@ -227,7 +253,7 @@
         });
 
         let l = document.createElement("label");
-        l.setAttribute("id","subtreename_"+t);
+        l.setAttribute("id","subtreename_"+myEscape(t));
         if(t != _M.rootname){
           l.setAttribute("contenteditable", true);
           l.classList.add("editable");
@@ -324,13 +350,19 @@
       return arr;
     }
 
+    function ifUndefinedThen(x,then){
+      return (typeof x === "undefined" ? then : x);
+    }
 
     function endInput(elem){
       let _id = elem.id;
-      if(_id.startsWith(idPrefix)){
+      if(_id.startsWith(_M.idPrefix) || _id.startsWith(_M.idPrefix_label)){
         let ids = toIdArr(_id);
         let {root,id} = last(ids);
-        str = _M.tryRewriteTreeWithIndex(str)(root)(id)(elem.innerText);
+        let text_body = document.getElementById(fromIdArr(ids,_M.idPrefix))      .textContent;
+        let text_rule = document.getElementById(fromIdArr(ids,_M.idPrefix_label)).textContent;
+        let result = text_body + (text_rule=="" ? "" : "#"+text_rule);
+        str = _M.tryRewriteTreeWithIndex(str)(root)(id)(result);
       }else if(_id.startsWith("subtreename")){
         let ids = toIdArr(_id);
         let {root,id} = last(ids);
