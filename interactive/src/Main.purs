@@ -11,7 +11,7 @@ import Prelude
 
 import Data.Array as A
 import Data.Generic.Rep (class Generic)
-import Data.List (List(Nil), (:), head, elem, concat, length, intercalate, foldl, foldr, reverse, filter, zip, range, singleton, index, take, drop, null, snoc, mapMaybe)
+import Data.List (List(Nil), (:), head, elem, concat, length, intercalate, foldl, foldr, reverse, filter, zip, range, singleton, index, take, drop, null, snoc, mapMaybe, nub)
 import Data.List.Lazy (Pattern)
 import Data.Map as M
 import Data.Set as S
@@ -377,6 +377,18 @@ _branchToString ixarr tree =
     Just x -> toOriginal x
     _      -> ""
 
+_getDependency :: Str -> Trees -> List Str
+_getDependency name dict = nub $ 
+  case M.lookup name dict of
+    Nothing -> Nil
+    Just {tree: tree, comment: _} -> go tree
+      where
+        go (Node b _ ps) =
+          case isImport b of
+            Just i  ->  _getDependency i dict ++! singleton i
+            Nothing -> go =<< ps
+
+
 strToMappedTree :: Str -> (Tree -> Tree) -> Str
 strToMappedTree str f = 
   case parseFromStrToTree str of
@@ -426,6 +438,7 @@ countParents        s t i = strToConvertedA (_countParents        i) s t 0
 getContentWithIndex s t i = strToConvertedA (_getContentWithIndex i) s t ""
 branchToString      s t i = strToConvertedA (_branchToString      i) s t ""
 getComment          s t   = either (const "") (\dict -> maybe "" (\tc -> tc.comment) (M.lookup t dict)) (parseFromStrToTrees s)
+getDependency       s t   = either (const []) (\dict -> A.fromFoldable $ _getDependency t dict) (parseFromStrToTrees s)
 getSubTrees         s     = either (const []) (A.fromFoldable <<< getTreesName_rootFirst) (parseFromStrToTrees s)
 
 strToConvertedStr :: (Tree -> Str) -> Str -> Str

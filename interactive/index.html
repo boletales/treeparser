@@ -63,7 +63,7 @@
       font-size: small;
       position: absolute;
     }
-    #selector{
+    .selector{
       display: inline;
     }
     #white{
@@ -75,9 +75,13 @@
   <script type='text/javascript' id='MathJax-script' async src='https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js'></script>
 </head>
 <body class="tex2jax_ignore" onkeydown="key();">
-  <div id="selector">
+  <div id="selector" class="selector">
     
-  </div> <input type="button" value="+空のサブ木" onclick="addSubTree();"> <input type="button" value="現在のサブ木を削除" onclick="tryDeleteSubTree(true);"><br><br>
+  </div> <input type="button" value="+空のサブ木" onclick="addSubTree();"> <input type="button" value="現在のサブ木を削除" onclick="tryDeleteSubTree(true);"><br>
+  　↳依存：
+  <div id="dependency" class="selector">
+    
+  </div><br><br>
   <div class="fbox">
   <div id="editor">
     
@@ -126,14 +130,15 @@
   </div>
   <script>
     const treekey = "tree";
-    let str      = loadTreeFromBrowser();
-    let selector = document.getElementById("selector");
-    let editor   = document.getElementById("editor");
-    let white    = document.getElementById("white");
-    let realtext = document.getElementById("realtext");
-    let latex    = document.getElementById("latex");
-    let viewer   = document.getElementById("viewer");
-    let comment  = document.getElementById("comment");
+    let str        = loadTreeFromBrowser();
+    let selector   = document.getElementById("selector");
+    let dependency = document.getElementById("dependency");
+    let editor     = document.getElementById("editor");
+    let white      = document.getElementById("white");
+    let realtext   = document.getElementById("realtext");
+    let latex      = document.getElementById("latex");
+    let viewer     = document.getElementById("viewer");
+    let comment    = document.getElementById("comment");
     let _M = PS.Main;
     let idPrefix = _M.idPrefix
     let tree = _M.rootname;
@@ -215,6 +220,13 @@
         e.style.marginLeft = "";
         e.style.width      = "";
       });
+      Array.from(document.getElementsByClassName("rightlabel")).forEach(e=>{
+        e.style.left = "";
+        e.style.top  = "";
+      });
+      Array.from(document.getElementsByClassName("branch")).forEach(box=>{
+        box.style.marginRight = "";
+      });
 
       Array.from(document.getElementsByClassName("branch")).reverse().forEach(box=>{
         let ls = box.getElementsByClassName("proofline");
@@ -241,8 +253,8 @@
             label.style.top  = (linebb.y - boxbb.y - label.clientHeight/2)+ "px";
             boxbb = box.getBoundingClientRect();
             let labelbb = label.getBoundingClientRect();
-            if(boxbb.x+boxbb.width < labelbb.x+labelbb.width+margin_branch){
-              box.style.marginRight = ((labelbb.x+labelbb.width+margin_branch)-(boxbb.x+boxbb.width)) + "px"
+            if(boxbb.width < linebb.width + margin_label +labelbb.width+margin_branch){
+              box.style.marginRight = ((linebb.width + margin_label +labelbb.width + margin_branch)-(boxbb.width)) + "px"
             }
           }
         }
@@ -250,16 +262,11 @@
     }
 
     function refreshSelectors(){
-      selector.innerHTML = "";
-      let trees = _M.getSubTrees(str);
-      if(trees.indexOf(tree) == -1){
-        tree = _M.rootname;
-      }
-      trees.forEach(t=>{
+      let addSelector = (prefix,to) => (t) => {
         let i = document.createElement("input");
         i.setAttribute("type","radio");
-        i.setAttribute("name",t);
-        i.setAttribute("id","subtree_"+t);
+        i.setAttribute("name",prefix);
+        i.setAttribute("id",prefix+"_"+t);
         if(t == tree) i.setAttribute("checked",true);
         i.onchange = (e=>{
           if(e.target.checked){
@@ -269,7 +276,7 @@
         });
 
         let l = document.createElement("label");
-        l.setAttribute("id","subtreename_"+myEscape(t));
+        l.setAttribute("id",prefix+"name_"+myEscape(t));
         if(t != _M.rootname){
           l.setAttribute("contenteditable", true);
           l.classList.add("editable");
@@ -277,12 +284,22 @@
           l.onblur = ()=>{focusout();};
           l.onkeydown  = ()=>{if(event.key == "Enter"){endInput(l)}};
         }else{
-          l.setAttribute("for","subtree_"+t);
+          l.setAttribute("for",prefix+"_"+t);
         }
         l.textContent = t;
-        selector.appendChild(i);
-        selector.appendChild(l);
-      });
+        to.appendChild(i);
+        to.appendChild(l);
+      };
+
+      selector.innerHTML = "";
+      dependency.innerHTML = "";
+      let trees = _M.getSubTrees(str);
+      if(trees.indexOf(tree) == -1){
+        tree = _M.rootname;
+      }
+      let deps = _M.getDependency(str)(tree);
+      trees.forEach(addSelector("subtree"   ,selector));
+      deps .forEach(addSelector("dependency",dependency));
     }
 
     function refreshLaTeX(){
