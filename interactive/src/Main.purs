@@ -80,13 +80,14 @@ readComment :: Tree -> CommentedTree
 readComment tree = go Nil tree
   where
     end cs t = {tree: t, comment: (intercalate "\n" $ cs)}
-    go cs (Node b r (p:Nil)) =
-      let l = unsplitLineOnSharp {body: b, rule:r}
-      in case Stc.stripPrefix (Pattern "//") l of
-            Just c  -> go (c:cs) p
-            Nothing -> end cs p
-
-    go cs t = end cs t
+    go cs t =
+      case t of
+        Node b r (p:Nil) ->
+          let l = unsplitLineOnSharp {body: b, rule:r}
+          in case Stc.stripPrefix (Pattern "//") l of
+                Just c  -> go (c:cs) p
+                Nothing -> end cs t
+        _ -> end cs t
 
 parseFromStrToTree :: String -> Either Error Closed
 parseFromStrToTree str = readTree $ map strip' $ A.toUnfoldable $ St.split (Pattern "\n") str
@@ -573,7 +574,19 @@ toOriginal tree = go tree ""
 
 treesToOriginal :: Trees -> Str
 treesToOriginal dict =
-  intercalate "\n" $ mapMaybe (\k -> (\tc -> toOriginal tc.tree ++! intercalate "" (map ("\n//" ++! _) (St.split (Pattern "\n") tc.comment)) ++! if k == rootname then "" else ("\n@" ++! k ++! "\n\n")) <$> M.lookup k dict) $ getTreesName_rootLast dict
+  intercalate "\n" $ mapMaybe 
+    (\k -> 
+      (\tc ->
+        toOriginal tc.tree ++!
+          (if tc.comment == ""
+            then ""
+            else intercalate "" (map ("\n//" ++! _) (St.split (Pattern "\n") tc.comment))) ++!
+          (if k == rootname
+            then ""
+            else ("\n@" ++! k ++! "\n\n")
+          )
+      ) <$> M.lookup k dict
+    ) $ getTreesName_rootLast dict
 
 getTreesName_rootFirst :: Trees -> List Str
 getTreesName_rootFirst dict =      cons rootname (S.toUnfoldable $ (S.filter (_ /= rootname)) (M.keys dict))

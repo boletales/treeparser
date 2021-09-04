@@ -139,6 +139,8 @@
     let tree = _M.rootname;
     let history = [];
     let historypos = -1;
+    let debug = false;
+
 
     let shown = {};
     refresh();
@@ -205,40 +207,45 @@
       //let a = document.body.offsetHeight;
       //editor.style.display = "none";
       //editor.style.display = "block";
+      const margin_hr = 0;
+      const margin_label  = 2;
+      const margin_branch = 0;
+
       Array.from(document.getElementsByClassName("proofline")).forEach(e=>{
         e.style.marginLeft = "";
         e.style.width      = "";
       });
 
-      const margin_label = 2;
-      Array.from(document.getElementsByClassName("rightlabel")).forEach(e=>{
-        if(e.textContent == "") e.style.display = "none";
-        let box = e.parentElement;
-        let boxbb = e.parentElement.getBoundingClientRect();
+      Array.from(document.getElementsByClassName("branch")).reverse().forEach(box=>{
         let ls = box.getElementsByClassName("proofline");
+        let _l = ls.length > 0;
+        let rs = box.getElementsByClassName("rightlabel");
+        let _r = rs.length > 0;
+        let boxbb = box.getBoundingClientRect();
         if(ls.length >0){
           let line = last(ls);
           let linebb  = line.getBoundingClientRect();
-          e.style.left = (linebb.x - boxbb.x + linebb.width + margin_label)+ "px";
-          e.style.top  = (linebb.y - boxbb.y - e.clientHeight/2)+ "px";
-          let ebb = e.getBoundingClientRect();
-          box.style.marginRight = ebb.width + "px";
+          //left and right parent
+          let lpbb  = box.getElementsByClassName("parents")[0].firstElementChild.lastElementChild.getBoundingClientRect();
+          let rpbb  = box.getElementsByClassName("parents")[0]. lastElementChild.lastElementChild.getBoundingClientRect();
+          let cbb   = box.lastElementChild.getBoundingClientRect();
+
+          let lx = Math.min(lpbb.x, cbb.x) - boxbb.x - margin_hr;
+          let rx = Math.max(rpbb.x + rpbb.width) - boxbb.x + margin_hr;
+          line.style.marginLeft = (lx)+ "px";
+          line.style.width      = Math.max(rx - lx,cbb.width) + "px";
+          linebb  = line.getBoundingClientRect();
+          if(rs.length >0){
+            let label = last(rs);
+            label.style.left = (linebb.x - boxbb.x + linebb.width + margin_label)+ "px";
+            label.style.top  = (linebb.y - boxbb.y - label.clientHeight/2)+ "px";
+            boxbb = box.getBoundingClientRect();
+            let labelbb = label.getBoundingClientRect();
+            if(boxbb.x+boxbb.width < labelbb.x+labelbb.width+margin_branch){
+              box.style.marginRight = ((labelbb.x+labelbb.width+margin_branch)-(boxbb.x+boxbb.width)) + "px"
+            }
+          }
         }
-      });
-
-      const margin_hr = 0;
-      Array.from(document.getElementsByClassName("proofline")).forEach(e=>{
-        let box = e.parentElement;
-        let boxbb = e.parentElement.getBoundingClientRect();
-        //left and right parent
-        let lpbb  = box.firstElementChild.firstElementChild.lastElementChild.getBoundingClientRect();
-        let rpbb  = box.firstElementChild. lastElementChild.lastElementChild.getBoundingClientRect();
-        let cbb   = box.lastElementChild.getBoundingClientRect();
-
-        let lx = Math.min(lpbb.x, cbb.x) - boxbb.x - margin_hr;
-        let rx = Math.max(rpbb.x + rpbb.width) - boxbb.x + margin_hr;
-        e.style.marginLeft = (lx)+ "px";
-        e.style.width      = Math.max(rx - lx,cbb.width) + "px";
       });
     }
 
@@ -283,7 +290,6 @@
       viewer.innerText = latex.value;
       if(typeof MathJax != "undefined") MathJax.typesetPromise().then(()=>null);
     }
-    let debug = false;
     function key(){
       if(debug) console.log(event);
       let ctrl  = event.metaKey || event.ctrlKey;
