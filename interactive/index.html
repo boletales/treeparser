@@ -13,7 +13,7 @@
     .parents {
       display: flex;
       align-items: flex-end;
-      justify-content: space-between;
+      justify-content: space-around;
     }
     .fbox{
       display: flex;
@@ -86,10 +86,13 @@
     
   </div>
   </div>
-  <br><br><br><br><br>
+  <br><br><br><br>
+  <span>↓サブ木についてのメモ欄</span><br>
+  <textarea id="comment" rows="6" cols="30" onfocusout="endInput(this);"></textarea>
+  <br><br><br><br>
   <div class="fbox">
     <div id="realout">
-      <textarea id="realtext" rows="10" cols="40"></textarea> <input type="button" onclick="load();" value="load">
+      <textarea id="realtext" rows="10" cols="60"></textarea> <input type="button" onclick="load();" value="load">
     </div>
     <div class="howtouse">
       コマンド（CtrlはCommandで代用可）：
@@ -99,8 +102,8 @@
         <li>Ctrl + Shift + ↑：要素をつぶす</li>
         <li>Ctrl + Delete：葉を削除（+Shift：枝を削除）</li>
         <li>Ctrl + q：枝のテキスト化（Enterで枝に戻す）</li>
-        <li>Ctrl + @：枝のサブ木インポート化</li>
-        <li>Ctrl + $：サブ木インポートの枝化</li>
+        <li>Ctrl + @：枝の圧縮</li>
+        <li>Ctrl + $：圧縮された枝の展開</li>
         <li>Ctrl + Shift + z：undo</li>
         <li>Ctrl + Shift + y：redo</li>
       </ul>
@@ -117,7 +120,7 @@
   <br>
   <hr>
   <input type="button" onclick="refreshLaTeX();" value="to LaTeX"><br>
-  <textarea id="latex"    rows="10" cols="40"></textarea>
+  <textarea readonly id="latex"    rows="10" cols="60"></textarea>
   <div id="viewer" class="tex2jax_process">
     
   </div>
@@ -130,6 +133,7 @@
     let realtext = document.getElementById("realtext");
     let latex    = document.getElementById("latex");
     let viewer   = document.getElementById("viewer");
+    let comment  = document.getElementById("comment");
     let _M = PS.Main;
     let idPrefix = _M.idPrefix
     let tree = _M.rootname;
@@ -182,6 +186,7 @@
         historypos += 1;
       }
       refreshSelectors();
+      comment.value = _M.getComment(str)(tree);
 
       Array.from(document.getElementsByClassName("treeswitch")).forEach(e=>{
         shown[e.id] = e.checked;
@@ -200,20 +205,9 @@
       //let a = document.body.offsetHeight;
       //editor.style.display = "none";
       //editor.style.display = "block";
-
-      const margin_hr = 0;
       Array.from(document.getElementsByClassName("proofline")).forEach(e=>{
-        let box = e.parentElement;
-        let boxbb = e.parentElement.getBoundingClientRect();
-        //left and right parent
-        let lpbb  = box.firstElementChild.firstElementChild.lastElementChild.getBoundingClientRect();
-        let rpbb  = box.firstElementChild. lastElementChild.lastElementChild.getBoundingClientRect();
-        let cbb   = box.lastElementChild.getBoundingClientRect();
-
-        let lx = Math.min(lpbb.x, cbb.x) - boxbb.x - margin_hr;
-        let rx = Math.max(rpbb.x + rpbb.width) - boxbb.x + margin_hr;
-        e.style.marginLeft = (lx)+ "px";
-        e.style.width      = Math.max(rx - lx,cbb.width) + "px";
+        e.style.marginLeft = "";
+        e.style.width      = "";
       });
 
       const margin_label = 2;
@@ -230,6 +224,21 @@
           let ebb = e.getBoundingClientRect();
           box.style.marginRight = ebb.width + "px";
         }
+      });
+
+      const margin_hr = 0;
+      Array.from(document.getElementsByClassName("proofline")).forEach(e=>{
+        let box = e.parentElement;
+        let boxbb = e.parentElement.getBoundingClientRect();
+        //left and right parent
+        let lpbb  = box.firstElementChild.firstElementChild.lastElementChild.getBoundingClientRect();
+        let rpbb  = box.firstElementChild. lastElementChild.lastElementChild.getBoundingClientRect();
+        let cbb   = box.lastElementChild.getBoundingClientRect();
+
+        let lx = Math.min(lpbb.x, cbb.x) - boxbb.x - margin_hr;
+        let rx = Math.max(rpbb.x + rpbb.width) - boxbb.x + margin_hr;
+        e.style.marginLeft = (lx)+ "px";
+        e.style.width      = Math.max(rx - lx,cbb.width) + "px";
       });
     }
 
@@ -279,7 +288,7 @@
       if(debug) console.log(event);
       let ctrl  = event.metaKey || event.ctrlKey;
       let shift = event.shiftKey;
-      if(event.key == "Enter"){
+      if(event.key == "Enter" && event.target.classList.contains("editable")){
         endInput(event.target);
       }else if(event.key == "ArrowRight" && ctrl && !shift){
         moveRight(event.target);
@@ -369,6 +378,8 @@
         let newname = elem.textContent;
         str = _M.tryRenameSubTree(str)(root)(newname);
         if(tree == root) tree = newname;
+      }else if(_id == "comment"){
+        str = _M.tryRewriteComment(str)(tree)(elem.value);
       }
       refresh();
     }

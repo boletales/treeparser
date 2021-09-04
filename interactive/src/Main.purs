@@ -73,13 +73,28 @@ derive instance genericClosed :: Generic Closed _
 instance showClosed :: Show Closed where
   show = genericShow
 
+type Trees = M.Map Str CommentedTree
+type CommentedTree = {tree:: Tree, comment:: Str}
+
+readComment :: Tree -> CommentedTree
+readComment tree = go Nil tree
+  where
+    end cs t = {tree: t, comment: (intercalate "\n" $ cs)}
+    go cs (Node b r (p:Nil)) =
+      let l = unsplitLineOnSharp {body: b, rule:r}
+      in case Stc.stripPrefix (Pattern "//") l of
+            Just c  -> go (c:cs) p
+            Nothing -> end cs p
+
+    go cs t = end cs t
+
 parseFromStrToTree :: String -> Either Error Closed
 parseFromStrToTree str = readTree $ map strip' $ A.toUnfoldable $ St.split (Pattern "\n") str
 
 rootname :: Str
 rootname = "root"
 
-parseFromStrToTrees :: Str -> Either Error (M.Map Str Tree)
+parseFromStrToTrees :: Str -> Either Error Trees
 parseFromStrToTrees str = go (A.toUnfoldable $ St.split (Pattern "\n") str) M.empty
   where
     go lines trees = 
@@ -89,9 +104,9 @@ parseFromStrToTrees str = go (A.toUnfoldable $ St.split (Pattern "\n") str) M.em
           if M.member sr trees || sr == rootname then
             Left (MultiDef sr)
           else
-            go ls (M.insert sr t trees)
+            go ls (M.insert sr (readComment t) trees)
         
-        Right (Closed t EOT ls) -> Right (M.insert rootname t trees)
+        Right (Closed t EOT ls) -> Right (M.insert rootname (readComment t) trees)
         Right _                 -> Left OpenPar
 
 root :: (List Tree) -> End -> (List Str) -> Either Error Closed
@@ -260,7 +275,7 @@ _trySquashWithIndex ixarr oldtree = go (A.toUnfoldable ixarr) oldtree
     go (i:is) (Node ob or ps) =
       Node ob or (modifyNth i (go is) ps)
 
-_tryMakeNewSubTree :: Tree -> (M.Map Str Tree) -> (Tuple Str (M.Map Str Tree))
+_tryMakeNewSubTree :: Tree -> Trees -> (Tuple Str Trees)
 _tryMakeNewSubTree tree dict = go 1
   where 
     name i = "subtree" ++! show i
@@ -268,26 +283,26 @@ _tryMakeNewSubTree tree dict = go 1
       if M.member (name i) dict then
         go (i+1)
       else
-        Tuple (name i) (M.insert (name i) tree dict)
+        Tuple (name i) (M.insert (name i) {tree:tree, comment:""} dict)
 
-_tryMakeEmptySubTree :: (M.Map Str Tree) -> (M.Map Str Tree)
+_tryMakeEmptySubTree :: Trees -> Trees
 _tryMakeEmptySubTree = snd <<< _tryMakeNewSubTree (Node "" Nothing Nil)
 
-_tryMakeBranchSubTree :: Str -> Array Int -> (M.Map Str Tree) -> (M.Map Str Tree)
+_tryMakeBranchSubTree :: Str -> Array Int -> Trees -> Trees
 _tryMakeBranchSubTree name id dict = 
   case M.lookup name dict of
     Nothing   -> dict
-    Just tree -> 
-      case getBranchById id tree of
+    Just tc -> 
+      case getBranchById id tc.tree of
         Nothing     -> dict
-        Just branch -> (\(Tuple newname newdict) -> M.insert name (_tryRewriteTreeWithIndex id ("$"++!newname) tree) newdict) $ _tryMakeNewSubTree branch dict
+        Just branch -> (\(Tuple newname newdict) -> M.insert name (applyToTree (_tryRewriteTreeWithIndex id ("$"++!newname)) tc) newdict) $ _tryMakeNewSubTree branch dict
 
-_tryApplyToAllTrees :: (Str -> Str) -> (M.Map Str Tree) -> (M.Map Str Tree)
-_tryApplyToAllTrees f dict = M.mapMaybe (pure <$> go) dict
+_tryApplyToAllTrees :: (Str -> Str) -> Trees -> Trees
+_tryApplyToAllTrees f dict = M.mapMaybe (pure <$> applyToTree go) dict
   where
     go (Node body rule ps) = Node (f body) rule (map go ps)
 
-_tryRenameSubTree :: Str -> Str -> (M.Map Str Tree) -> (M.Map Str Tree)
+_tryRenameSubTree :: Str -> Str -> Trees -> Trees
 _tryRenameSubTree from to dict =
   if from == rootname then
     dict
@@ -299,23 +314,23 @@ _tryRenameSubTree from to dict =
           Just _  -> dict
           Nothing -> _tryApplyToAllTrees (\b -> if isImport b == Just from then "$"++!to else b) $ M.insert to tree $ M.delete from dict
 
-_tryDeleteSubTree :: Boolean -> Str -> (M.Map Str Tree) -> (M.Map Str Tree)
+_tryDeleteSubTree :: Boolean -> Str -> Trees -> Trees
 _tryDeleteSubTree force name dict =
   if name == rootname then
     dict
   else
     case M.lookup name dict of
-      Just (Node _ _ Nil) -> M.delete name dict
-      Just (Node _ _ _)   -> if force then M.delete name dict else dict
+      Just {tree:(Node _ _ Nil), comment:_} -> M.delete name dict
+      Just {tree:(Node _ _ _)  , comment:_} -> if force then M.delete name dict else dict
       _                   -> dict
 
-_tryInline :: Str -> Array Int -> (M.Map Str Tree) -> (M.Map Str Tree)
+_tryInline :: Str -> Array Int -> Trees -> Trees
 _tryInline name id dict = fromMaybe dict (do
-    t <- M.lookup name dict
-    (Node b _ _) <- getBranchById id t
+    tc <- M.lookup name dict
+    (Node b _ _) <- getBranchById id tc.tree
     i  <- isImport b
     it <- M.lookup i dict
-    Just $ M.insert name (_tryModifyTreeWithIndex id it t) dict
+    Just $ M.insert name (applyToTree (_tryModifyTreeWithIndex id it.tree) tc) dict
   )
 
 _addChild :: Tree -> Tree
@@ -368,14 +383,17 @@ strToMappedTree str f =
     Right (Closed t EOT _) -> toOriginal $ f t
     Right _                -> "{ is not closed"
 
-strToMappedTrees :: Str -> ((M.Map Str Tree) -> (M.Map Str Tree)) -> Str
+strToMappedTrees :: Str -> (Trees -> Trees) -> Str
 strToMappedTrees str f = 
   case parseFromStrToTrees str of
     Left error -> show error
     Right m    -> treesToOriginal $ f m
 
-applyToTrees :: Str -> (Tree -> Tree) -> ((M.Map Str Tree) -> (M.Map Str Tree))
-applyToTrees n f = M.alter ((<$>) f) n
+applyToTree :: (Tree -> Tree) -> (CommentedTree -> CommentedTree)
+applyToTree f tc = {tree:f tc.tree, comment: tc.comment}
+
+applyToTrees :: Str -> (Tree -> Tree) -> (Trees -> Trees)
+applyToTrees n f = M.alter (map (applyToTree f)) n
 
 addChild                   str name      = strToMappedTrees str $ applyToTrees name $ _addChild
 killEmptyBranches          str name      = strToMappedTrees str $ applyToTrees name $ _killEmptyBranches
@@ -392,19 +410,21 @@ tryDeleteSubTree           str name f    = strToMappedTrees str $ _tryDeleteSubT
 tryMakeEmptySubTree        str           = strToMappedTrees str $ _tryMakeEmptySubTree
 tryCleanSubTrees           str f         = strToMappedTrees str $ \dict -> foldr (_tryDeleteSubTree f) dict (M.keys dict)
 tryInline                  str name id   = strToMappedTrees str $ _tryInline name id
+tryRewriteComment          str name c    = strToMappedTrees str $ M.alter (map (\tc -> {tree:tc.tree, comment:c})) name
 
 strToConvertedA :: forall a. (Tree -> a) -> Str -> Str -> a -> a
 strToConvertedA f str id default = 
   case (M.lookup id) <$> parseFromStrToTrees str of
     Left  _        -> default
     Right Nothing  -> default
-    Right (Just t) -> f t
+    Right (Just t) -> f t.tree
 
 isNodeAxiom         s t i = strToConvertedA (_isNodeAxiom         i) s t false
 isNodeImport        s t i = strToConvertedA (_isNodeImport        i) s t {isImport: false, importOf: ""}
 countParents        s t i = strToConvertedA (_countParents        i) s t 0
 getContentWithIndex s t i = strToConvertedA (_getContentWithIndex i) s t ""
 branchToString      s t i = strToConvertedA (_branchToString      i) s t ""
+getComment          s t   = either (const "") (\dict -> maybe "" (\tc -> tc.comment) (M.lookup t dict)) (parseFromStrToTrees s)
 getSubTrees         s     = either (const []) (A.fromFoldable <<< getTreesName_rootFirst) (parseFromStrToTrees s)
 
 strToConvertedStr :: (Tree -> Str) -> Str -> Str
@@ -418,11 +438,11 @@ strToHTML     s t = (either show (subTreeToHTML t) <<< parseFromStrToTrees) s
 strToLaTeX    s   = (either show toLaTeX           <<< parseFromStrToTrees) s
 strToOriginal s   = (strToConvertedStr toOriginal) s
 
-toLaTeX :: M.Map Str Tree -> Str
+toLaTeX :: Trees -> Str
 toLaTeX dict = 
   case M.lookup rootname dict of
     Nothing   -> "No root tree."
-    Just tree -> "\\begin{prooftree}\n" ++! intercalate "\n" (go (singleton rootname) tree) ++! "\n\\end{prooftree}"
+    Just tc -> "\\begin{prooftree}\n" ++! intercalate "\n" (go (singleton rootname) tc.tree) ++! "\n\\end{prooftree}"
       where
         go imported (Node body rule parents)=
             case isImport body of
@@ -431,7 +451,7 @@ toLaTeX dict =
                   singleton $ "circular reference of " ++! i
                 else case M.lookup i dict of
                         Nothing -> singleton $ "no tree named " ++! i
-                        Just t  -> go (i:imported) t
+                        Just t  -> go (i:imported) t.tree
               Nothing ->
                 let codeParents = (go imported) =<< parents
 
@@ -463,11 +483,11 @@ idPrefix_import = "import"
 idPrefix_check :: Str
 idPrefix_check = "show"
 
-subTreeToHTML :: Str -> (M.Map Str Tree) -> Str
+subTreeToHTML :: Str -> Trees -> Str
 subTreeToHTML name dict = -- go tree "" Nil
   case M.lookup name dict of
     Nothing   -> "No such tree."
-    Just tree -> go (singleton name) tree "" Nil (escapeWith ruleIDChars $ name)
+    Just tc -> go (singleton name) tc.tree "" Nil (escapeWith ruleIDChars $ name)
       where
         indentunit = "  " 
         go imported (Node body rule parents) indents ids log=
@@ -486,12 +506,12 @@ subTreeToHTML name dict = -- go tree "" Nil
                         ++! (idPrefix_label  ++! "_" ++! log)
                         ++! "' onkeydown='key();' onfocusout='focusout();' >"  ++!  "</span>\n"
 
-                    Just t  -> 
+                    Just tc ->
                       indents ++! "<input type='checkbox' id='" 
                         ++! (idPrefix_check ++! "_" ++! log)
                         ++! "' class='treeswitch'>\n" ++!
                       indents ++! "<div class='parents imported'>\n" ++!
-                      go (i:imported) t (indents ++! indentunit) Nil (log ++! "_" ++! escapeWith ruleIDChars i) ++!
+                      go (i:imported) tc.tree (indents ++! indentunit) Nil (log ++! "_" ++! escapeWith ruleIDChars i) ++!
                       indents ++! "</div>\n"  ++!
                       indents ++! "<span class='node editable' contenteditable='true' id='" 
                         ++! (idPrefix ++! "_" ++! log)
@@ -504,7 +524,7 @@ subTreeToHTML name dict = -- go tree "" Nil
                         ++! (idPrefix_check ++! "_" ++! log)
                         ++! "' class='switchlabel'>↑</label>\n" ++!
                       indents ++! "<div class='omitted'>\n" ++!
-                      escapeWith ruleHTMLChars ((\(Node b _ _) -> b) t) ++!
+                      escapeWith ruleHTMLChars ((\(Node b _ _) -> b) tc.tree) ++!
                       indents ++! "</div>\n"++!
                       indents ++! "</span>\n"
                 ) ++!
@@ -551,14 +571,14 @@ toOriginal tree = go tree ""
       indents ++! "}\n" ++!
       indents ++! unsplitLineOnSharp {body:ifEmpty placeHolder body,rule:rule}
 
-treesToOriginal :: M.Map Str Tree -> Str
+treesToOriginal :: Trees -> Str
 treesToOriginal dict =
-  intercalate "\n" $ mapMaybe (\k -> (\t -> toOriginal t ++! if k == rootname then "" else ("\n@" ++! k ++! "\n\n")) <$> M.lookup k dict) $ getTreesName_rootLast dict
+  intercalate "\n" $ mapMaybe (\k -> (\tc -> toOriginal tc.tree ++! intercalate "" (map ("\n//" ++! _) (St.split (Pattern "\n") tc.comment)) ++! if k == rootname then "" else ("\n@" ++! k ++! "\n\n")) <$> M.lookup k dict) $ getTreesName_rootLast dict
 
-getTreesName_rootFirst :: M.Map Str Tree -> List Str
+getTreesName_rootFirst :: Trees -> List Str
 getTreesName_rootFirst dict =      cons rootname (S.toUnfoldable $ (S.filter (_ /= rootname)) (M.keys dict))
 
-getTreesName_rootLast :: M.Map Str Tree -> List Str
+getTreesName_rootLast :: Trees -> List Str
 getTreesName_rootLast  dict = flip snoc rootname (S.toUnfoldable $ (S.filter (_ /= rootname)) (M.keys dict))
 
 replaceForLaTeX :: Str -> Str
