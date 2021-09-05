@@ -234,7 +234,7 @@
         let rs = box.getElementsByClassName("rightlabel");
         let _r = rs.length > 0;
         let boxbb = box.getBoundingClientRect();
-        if(ls.length >0){
+        if(ls.length >0 && last(ls).parentElement==box){
           let line = last(ls);
           let linebb  = line.getBoundingClientRect();
           //left and right parent
