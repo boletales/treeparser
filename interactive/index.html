@@ -54,7 +54,7 @@
       display: none;
     }
     .switchlabel{
-      color: lightblue;
+      color: #66a;
     }
     :checked ~ * > .switchlabel{
       color: blue;
@@ -105,7 +105,7 @@
         <li>Ctrl + Shift + ↓：要素を下に追加</li>
         <li>Ctrl + Shift + ↑：要素をつぶす</li>
         <li>Ctrl + Delete：葉を削除（+Shift：枝を削除）</li>
-        <li>Ctrl + q：枝のテキスト化（Enterで枝に戻す）</li>
+        <li>Ctrl + Shift + q：枝のテキスト化（Enterで枝に戻す）</li>
         <li>Ctrl + @：枝の圧縮</li>
         <li>Ctrl + $：圧縮された枝の展開</li>
         <li>Ctrl + Shift + z：undo</li>
@@ -325,7 +325,7 @@
         trySquash(event.target);
       }else if(event.key == "ArrowDown"  && ctrl && shift){
         tryInsert(event.target);
-      }else if(event.key == "q"          && ctrl && !shift){
+      }else if(event.key == "Q"          && ctrl && shift){
         openText(event.target);
       }else if(event.key == "Z"          && ctrl){
         undo();
@@ -391,8 +391,8 @@
       if(_id.startsWith(_M.idPrefix) || _id.startsWith(_M.idPrefix_label)){
         let ids = toIdArr(_id);
         let {root,id} = last(ids);
-        let text_body = document.getElementById(fromIdArr(ids,_M.idPrefix))      .textContent;
-        let text_rule = document.getElementById(fromIdArr(ids,_M.idPrefix_label)).textContent;
+        let text_body = document.getElementById(fromIdArr(ids,_M.idPrefix))      .innerText;
+        let text_rule = document.getElementById(fromIdArr(ids,_M.idPrefix_label)).innerText;
         let result = text_body + (text_rule=="" ? "" : "#"+text_rule);
         str = _M.tryRewriteTreeWithIndex(str)(root)(id)(result);
       }else if(_id.startsWith("subtreename")){
@@ -436,7 +436,7 @@
         let ids = toIdArr(_id);
         let {root,id} = last(ids);
         if(id.length==0){
-          if(ids.length==0){
+          if(ids.length<=1){
             str = _M.addChild(str)(root);
             refresh();
             focusTo(modifyId(ids, e=>[]));
@@ -459,7 +459,7 @@
           str = _M.addChild(str)(root);
           str = _M.tryAddParentLeftWithIndex(str)(root)([]);
           refresh();
-          focusTo(root,[0]);
+          focusTo([{root:root, id:[0]}]);
         }else{
           let oldid = id[id.length-1];
           let pid   = id.slice(0,-1);
@@ -481,10 +481,10 @@
         let ids = toIdArr(_id);
         let {root,id} = last(ids);
         if(id.length==0){
-          str = _M.addChild(str);
-          str = _M.tryAddParentRightWithIndex(str)([]);
+          str = _M.addChild(str)(root);
+          str = _M.tryAddParentRightWithIndex(str)(root)([]);
           refresh();
-          focusTo(root,[1]);
+          focusTo([{root:root, id:[1]}]);
         }else{
           let oldid = id[id.length-1];
           let pid   = id.slice(0,-1);
@@ -545,7 +545,6 @@
         if(id.length==0){
         }else{
           endInput(elem);
-          console.log(id);
           let pid   = id.slice(0,-1);
           let oldid = id[id.length-1];
           let pcs   = _M.countParents(str)(root)(pid);

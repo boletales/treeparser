@@ -28,7 +28,6 @@ main = pure unit
 
 type Str = String
 
-infixr 5 append as ++!
 
 cons :: forall a. a -> List a -> List a
 cons a b = a : b
@@ -162,13 +161,13 @@ splitLineOnSharp str = {body: strip' body',
         rule' = Stc.dropWhile (_ /= frc '#') str
 
 unsplitLineOnSharp :: {body::Str, rule::Maybe Str} -> Str
-unsplitLineOnSharp b = b.body ++! fromMaybe "" ((" #"++!_) <$> b.rule)
+unsplitLineOnSharp b = b.body <> fromMaybe "" ((" #"<>_) <$> b.rule)
 
 
 modifyNth :: forall a. Int -> (a -> a) -> List a -> List a
 modifyNth i f l = 
   case index l i of
-    Just e  -> take i l ++! singleton (f e) ++! drop (i+1) l
+    Just e  -> take i l <> singleton (f e) <> drop (i+1) l
     Nothing -> l
 
 removeNthIf :: forall a. (a -> Boolean) -> Int -> List a -> List a
@@ -220,7 +219,7 @@ _tryAddParentRightWithIndex :: Array Int -> Tree -> Tree
 _tryAddParentRightWithIndex ixarr oldtree = go (A.toUnfoldable ixarr) oldtree
   where 
     go Nil (Node ob or ps) = 
-      Node ob or (ps ++! (singleton $ Node "" Nothing Nil))
+      Node ob or (ps <> (singleton $ Node "" Nothing Nil))
     
     go (i:is) (Node ob or ps) =
       Node ob or (modifyNth i (go is) ps)
@@ -279,7 +278,7 @@ _trySquashWithIndex ixarr oldtree = go (A.toUnfoldable ixarr) oldtree
 _tryMakeNewSubTree :: Tree -> Trees -> (Tuple Str Trees)
 _tryMakeNewSubTree tree dict = go 1
   where 
-    name i = "subtree" ++! show i
+    name i = "subtree" <> show i
     go i =
       if M.member (name i) dict then
         go (i+1)
@@ -296,7 +295,7 @@ _tryMakeBranchSubTree name id dict =
     Just tc -> 
       case getBranchById id tc.tree of
         Nothing     -> dict
-        Just branch -> (\(Tuple newname newdict) -> M.insert name (applyToTree (_tryRewriteTreeWithIndex id ("$"++!newname)) tc) newdict) $ _tryMakeNewSubTree branch dict
+        Just branch -> (\(Tuple newname newdict) -> M.insert name (applyToTree (_tryRewriteTreeWithIndex id ("$"<>newname)) tc) newdict) $ _tryMakeNewSubTree branch dict
 
 _tryApplyToAllTrees :: (Str -> Str) -> Trees -> Trees
 _tryApplyToAllTrees f dict = M.mapMaybe (pure <$> applyToTree go) dict
@@ -313,7 +312,7 @@ _tryRenameSubTree from to dict =
       Just tree -> 
         case M.lookup to dict of
           Just _  -> dict
-          Nothing -> _tryApplyToAllTrees (\b -> if isImport b == Just from then "$"++!to else b) $ M.insert to tree $ M.delete from dict
+          Nothing -> _tryApplyToAllTrees (\b -> if isImport b == Just from then "$"<>to else b) $ M.insert to tree $ M.delete from dict
 
 _tryDeleteSubTree :: Boolean -> Str -> Trees -> Trees
 _tryDeleteSubTree force name dict =
@@ -456,15 +455,15 @@ toLaTeX :: Trees -> Str
 toLaTeX dict = 
   case M.lookup rootname dict of
     Nothing   -> "No root tree."
-    Just tc -> "\\begin{prooftree}\n" ++! intercalate "\n" (go (singleton rootname) tc.tree) ++! "\n\\end{prooftree}"
+    Just tc -> "\\begin{prooftree}\n" <> intercalate "\n" (go (singleton rootname) tc.tree) <> "\n\\end{prooftree}"
       where
         go imported (Node body rule parents)=
             case isImport body of
               Just i -> 
                 if elem i imported then
-                  singleton $ "circular reference of " ++! i
+                  singleton $ "circular reference of " <> i
                 else case M.lookup i dict of
-                        Nothing -> singleton $ "no tree named " ++! i
+                        Nothing -> singleton $ "no tree named " <> i
                         Just t  -> go (i:imported) t.tree
               Nothing ->
                 let codeParents = (go imported) =<< parents
@@ -472,16 +471,16 @@ toLaTeX dict =
                     codeRule =
                         case rule of
                             Nothing -> Nil
-                            Just r  -> ("\\RightLabel{${\\scriptsize " ++! r ++! "}$}") : Nil
+                            Just r  -> ("\\RightLabel{${\\scriptsize " <> r <> "}$}") : Nil
 
                     bodyReplaced = replaceForLaTeX body
 
                     codeBody =
                         case length parents of
-                            0 -> (     "\\AxiomC{$" ++! bodyReplaced ++! "$}") : Nil
-                            1 -> (  "\\UnaryInfC{$" ++! bodyReplaced ++! "$}") : Nil
-                            2 -> ( "\\BinaryInfC{$" ++! bodyReplaced ++! "$}") : Nil
-                            _ -> ("\\TrinaryInfC{$" ++! bodyReplaced ++! "$}") : Nil
+                            0 -> (     "\\AxiomC{$" <> bodyReplaced <> "$}") : Nil
+                            1 -> (  "\\UnaryInfC{$" <> bodyReplaced <> "$}") : Nil
+                            2 -> ( "\\BinaryInfC{$" <> bodyReplaced <> "$}") : Nil
+                            _ -> ("\\TrinaryInfC{$" <> bodyReplaced <> "$}") : Nil
                             
                 in  concat (codeParents : codeRule : codeBody : Nil)
 
@@ -508,57 +507,57 @@ subTreeToHTML name dict = -- go tree "" Nil
           case isImport body of
             Just i -> 
               if elem i imported then
-                "circular reference of " ++! i
+                "circular reference of " <> i
               else
-                indents ++! "<div class='branch'>\n"  ++!(
+                indents <> "<div class='branch'>\n"  <>(
                   case M.lookup i dict of
-                    Nothing -> "[tree not found: " ++! escapeWith ruleHTMLChars i ++! "]<br>" ++!
-                      indents ++! "<span class='node editable' contenteditable='true' id='" 
-                        ++! (idPrefix ++! "_" ++! log)
-                        ++! "' onkeydown='key();' onfocusout='focusout();' >"  ++! (escapeWith ruleHTMLChars $ unsplitLineOnSharp {body:body,rule:rule}) ++! "</span>\n" ++!
-                      indents ++! "<span class='rightlabel editable' contenteditable='true' id='" 
-                        ++! (idPrefix_label  ++! "_" ++! log)
-                        ++! "' onkeydown='key();' onfocusout='focusout();' >"  ++!  "</span>\n"
+                    Nothing -> "[tree not found: " <> escapeWith ruleHTMLChars i <> "]<br>" <>
+                      indents <> "<span class='node editable' contenteditable='true' id='" 
+                        <> (idPrefix <> "_" <> log)
+                        <> "' onkeydown='key();' onfocusout='focusout();' >"  <> (escapeWith ruleHTMLChars $ unsplitLineOnSharp {body:body,rule:rule}) <> "</span>\n" <>
+                      indents <> "<span class='rightlabel editable' contenteditable='true' id='" 
+                        <> (idPrefix_label  <> "_" <> log)
+                        <> "' onkeydown='key();' onfocusout='focusout();' >"  <>  "</span>\n"
 
                     Just tc ->
-                      indents ++! "<input type='checkbox' id='" 
-                        ++! (idPrefix_check ++! "_" ++! log)
-                        ++! "' class='treeswitch'>\n" ++!
-                      indents ++! "<div class='parents imported'>\n" ++!
-                      go (i:imported) tc.tree (indents ++! indentunit) Nil (log ++! "_" ++! escapeWith ruleIDChars i) ++!
-                      indents ++! "</div>\n"  ++!
-                      indents ++! "<span class='node editable' contenteditable='true' id='" 
-                        ++! (idPrefix ++! "_" ++! log)
-                        ++! "' onkeydown='key();' onfocusout='focusout();' >"  ++! (escapeWith ruleHTMLChars $ unsplitLineOnSharp {body:body,rule:rule}) ++! "</span>\n" ++!
-                      indents ++! "<span class='rightlabel editable' contenteditable='true' id='" 
-                        ++! (idPrefix_label  ++! "_" ++! log)
-                        ++! "' onkeydown='key();' onfocusout='focusout();' >"  ++!  "</span>\n" ++!
-                      indents ++! "<span type='checkbox'>\n" ++!
-                      indents ++! "<label type='checkbox' for='" 
-                        ++! (idPrefix_check ++! "_" ++! log)
-                        ++! "' class='switchlabel'>↑</label>\n" ++!
-                      indents ++! "<div class='omitted'>\n" ++!
-                      escapeWith ruleHTMLChars ((\(Node b _ _) -> b) tc.tree) ++!
-                      indents ++! "</div>\n"++!
-                      indents ++! "</span>\n"
-                ) ++!
-                indents ++! "</div>\n"
+                      indents <> "<input type='checkbox' id='" 
+                        <> (idPrefix_check <> "_" <> log)
+                        <> "' class='treeswitch'>\n" <>
+                      indents <> "<div class='parents imported'>\n" <>
+                      go (i:imported) tc.tree (indents <> indentunit) Nil (log <> "_" <> escapeWith ruleIDChars i) <>
+                      indents <> "</div>\n"  <>
+                      indents <> "<span class='node editable' contenteditable='true' id='" 
+                        <> (idPrefix <> "_" <> log)
+                        <> "' onkeydown='key();' onfocusout='focusout();' >"  <> (escapeWith ruleHTMLChars $ unsplitLineOnSharp {body:body,rule:rule}) <> "</span>\n" <>
+                      indents <> "<span class='rightlabel editable' contenteditable='true' id='" 
+                        <> (idPrefix_label  <> "_" <> log)
+                        <> "' onkeydown='key();' onfocusout='focusout();' >"  <>  "</span>\n" <>
+                      indents <> "<span type='checkbox'>\n" <>
+                      indents <> "<label type='checkbox' for='" 
+                        <> (idPrefix_check <> "_" <> log)
+                        <> "' class='switchlabel'>+↑</label>\n" <>
+                      indents <> "<div class='omitted'>\n" <>
+                      escapeWith ruleHTMLChars ((\(Node b _ _) -> b) tc.tree) <>
+                      indents <> "</div>\n"<>
+                      indents <> "</span>\n"
+                ) <>
+                indents <> "</div>\n"
             
             Nothing ->
-              indents ++! "<div class='branch'>\n"  ++!
+              indents <> "<div class='branch'>\n"  <>
               (if length parents > 0 then
-                indents ++! "<div class='parents'>\n"  ++!
-                intercalate "\n" (map (\(Tuple p i) -> go imported p (indents ++! indentunit) (i:ids) (log ++! "-" ++! show i)) (zip parents (range 0 (length parents)))) ++!
-                indents ++! "</div>\n"  ++!
-                indents ++! "<hr class='proofline'>\n"  
-              else "") ++!
-              indents ++! "<span class='rightlabel editable' contenteditable='true' id='" 
-                ++! (idPrefix_label  ++! "_" ++! log)
-                ++! "' onkeydown='key();' onfocusout='focusout();' >"  ++! (escapeWith ruleHTMLChars $ fromMaybe "" rule) ++! "</span>\n" ++!
-              indents ++! "<span class='node editable' contenteditable='true' id='" 
-                ++! (idPrefix  ++! "_" ++! log)
-                ++! "' onkeydown='key();' onfocusout='focusout();'>"  ++! (escapeWith ruleHTMLChars $ body) ++! "</span>\n" ++!
-              indents ++! "</div>\n"
+                indents <> "<div class='parents'>\n"  <>
+                intercalate "\n" (map (\(Tuple p i) -> go imported p (indents <> indentunit) (i:ids) (log <> "-" <> show i)) (zip parents (range 0 (length parents)))) <>
+                indents <> "</div>\n"  <>
+                indents <> "<hr class='proofline'>\n"  
+              else "") <>
+              indents <> "<span class='rightlabel editable' contenteditable='true' id='" 
+                <> (idPrefix_label  <> "_" <> log)
+                <> "' onkeydown='key();' onfocusout='focusout();' >"  <> (escapeWith ruleHTMLChars $ fromMaybe "" rule) <> "</span>\n" <>
+              indents <> "<span class='node editable' contenteditable='true' id='" 
+                <> (idPrefix  <> "_" <> log)
+                <> "' onkeydown='key();' onfocusout='focusout();'>"  <> (escapeWith ruleHTMLChars $ body) <> "</span>\n" <>
+              indents <> "</div>\n"
 
 ifEmpty :: Str -> Str -> Str
 ifEmpty instead str = if str == "" then instead else str
@@ -570,33 +569,33 @@ toOriginal tree = go tree ""
   where
     indentunit = "  "
     -- go (Import name) indents =
-    --   indents ++! "$" ++! name
+    --   indents <> "$" <> name
 
     go (Node body rule Nil) indents =
-      indents ++! unsplitLineOnSharp {body:ifEmpty placeHolder body,rule:rule}
+      indents <> unsplitLineOnSharp {body:ifEmpty placeHolder body,rule:rule}
     
     go (Node body rule (parent:Nil)) indents =
-      go parent indents ++! "\n" ++!
-      indents ++! unsplitLineOnSharp {body:ifEmpty placeHolder body,rule:rule}
+      go parent indents <> "\n" <>
+      indents <> unsplitLineOnSharp {body:ifEmpty placeHolder body,rule:rule}
     
     go (Node body rule parents) indents =
-      indents ++! "{\n" ++!
-      intercalate ("\n" ++! indents ++! ",\n") (map (\p -> go p (indents ++! indentunit)) parents) ++! "\n" ++!
-      indents ++! "}\n" ++!
-      indents ++! unsplitLineOnSharp {body:ifEmpty placeHolder body,rule:rule}
+      indents <> "{\n" <>
+      intercalate ("\n" <> indents <> ",\n") (map (\p -> go p (indents <> indentunit)) parents) <> "\n" <>
+      indents <> "}\n" <>
+      indents <> unsplitLineOnSharp {body:ifEmpty placeHolder body,rule:rule}
 
 treesToOriginal :: Trees -> Str
 treesToOriginal dict =
   intercalate "\n" $ mapMaybe 
     (\k -> 
       (\tc ->
-        toOriginal tc.tree ++!
+        toOriginal tc.tree <>
           (if tc.comment == ""
             then ""
-            else intercalate "" (map ("\n//" ++! _) (St.split (Pattern "\n") tc.comment))) ++!
+            else intercalate "" (map ("\n//" <> _) (St.split (Pattern "\n") tc.comment))) <>
           (if k == rootname
             then ""
-            else ("\n@" ++! k ++! "\n\n")
+            else ("\n@" <> k <> "\n\n")
           )
       ) <$> M.lookup k dict
     ) $ getTreesName_rootLast dict
@@ -626,11 +625,11 @@ replaceUnderbarNumToBlaced str = go str ""
             Just l ->
               if l.head == frc '_' then
                 if Stc.length (Stc.takeWhile isNumber l.tail) > 0 then
-                  go (Stc.dropWhile isNumber l.tail) $ done ++! ("_{" ++! Stc.takeWhile isNumber l.tail ++! "}")
+                  go (Stc.dropWhile isNumber l.tail) $ done <> ("_{" <> Stc.takeWhile isNumber l.tail <> "}")
                 else
-                  go (Stc.dropWhile isNumber l.tail) $ done ++! "_"
+                  go (Stc.dropWhile isNumber l.tail) $ done <> "_"
               else
-                go l.tail (done ++! Stc.singleton l.head)
+                go l.tail (done <> Stc.singleton l.head)
 
       
 
@@ -660,7 +659,7 @@ ruleHTMLChars =
 
 ruleLaTeXChars :: M.Map CodePoint Str
 ruleLaTeXChars =
-    map (_ ++! " ") $ M.fromFoldable $ [
+    map (_ <> " ") $ M.fromFoldable $ [
         Tuple (frc '$') "\\$",
         Tuple (frc '∀') "\\forall",
         Tuple (frc '∈') "\\in",
@@ -711,6 +710,6 @@ ruleLaTeXChars =
         Tuple (frc 'Θ') "\\Theta",
         Tuple (frc 'Π') "\\Pi",
         Tuple (frc 'Φ') "\\Phi"
-    ] ++! A.mapMaybe (\(Tuple ma b) -> (\a-> Tuple a b) <$> ma) [
+    ] <> A.mapMaybe (\(Tuple ma b) -> (\a-> Tuple a b) <$> ma) [
       Tuple (fsc "𝒫") "\\mathcal{P}"
     ]
