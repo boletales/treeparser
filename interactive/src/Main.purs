@@ -385,7 +385,7 @@ _getDependency name dict = nub $
       where
         go (Node b _ ps) =
           case isImport b of
-            Just i  ->  _getDependency i dict ++! singleton i
+            Just i  ->  i : _getDependency i dict
             Nothing -> go =<< ps
 
 

@@ -4,3 +4,4 @@ node_modules
 *.json
 *.svg
 *.html
+.psc-ide-port
